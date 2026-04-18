@@ -123,9 +123,9 @@ const Nav = () => {
             <div className="flex items-center gap-3">
                 {user && mounted ? (
                     <>
-                        <Link href="/notifications" className="hidden sm:inline-flex px-4 py-2 text-sm rounded-full border border-border bg-card/60 text-foreground hover:bg-card transition-colors">
+                        {/* <Link href="/notifications" className="hidden sm:inline-flex px-4 py-2 text-sm rounded-full border border-border bg-card/60 text-foreground hover:bg-card transition-colors">
                             📢 Notifications
-                        </Link>
+                        </Link> */}
                         <Link href="/create-request" className="px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
                             + Create request
                         </Link>

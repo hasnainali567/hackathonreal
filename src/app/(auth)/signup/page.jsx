@@ -23,7 +23,6 @@ const Auth = () => {
         password: 'demo123',
         role: 'Both'
     });
-    const [helpers, setHelpers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -35,34 +34,11 @@ const Auth = () => {
         }
     }, [router]);
 
-    useEffect(() => {
-        const loadHelpers = async () => {
-            try {
-                const res = await fetch('/api/users/helpers');
-                if (!res.ok) return;
-                const data = await res.json();
-                setHelpers(Array.isArray(data.data) ? data.data : []);
-            } catch (err) {
-                console.error('Failed to load helpers:', err);
-            }
-        };
-
-        loadHelpers();
-    }, []);
-
-    const handleUserSelect = (selectedUser) => {
-        setFormData({
-            ...formData,
-            username: selectedUser.name,
-            email: selectedUser.email
-        });
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         
         if (!formData.username || !formData.email || !formData.password) {
-            setError('Please select a user and fill all fields');
+            setError('Please fill all fields');
             return;
         }
 
@@ -167,28 +143,6 @@ const Auth = () => {
                     )}
 
                     <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                        <Field label="Select helper profile">
-                            <select
-                                value={formData.username}
-                                onChange={(e) => {
-                                    const selected = helpers.find(u => u.name === e.target.value);
-                                    if (selected) handleUserSelect(selected);
-                                }}
-                                className={inputCls}
-                            >
-                                <option value="">Choose a helper or both-role user</option>
-                                {helpers.length > 0 ? (
-                                    helpers.map(user => (
-                                        <option key={user.email || user.name} value={user.name}>
-                                            {user.name} {user.role ? `(${user.role})` : ''}
-                                        </option>
-                                    ))
-                                ) : (
-                                    <option value="" disabled>No helper profiles available yet</option>
-                                )}
-                            </select>
-                        </Field>
-
                         <Field label="Full name">
                             <input
                                 type="text"
