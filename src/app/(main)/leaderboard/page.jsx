@@ -97,7 +97,7 @@ const Leaderboard = () => {
 
     return (
         <div className="min-h-screen bg-canvas-grad">
-            <main className="max-w-[1280px] mx-auto px-6 lg:px-12 py-8 space-y-8">
+            <main className="max-w-7xl mx-auto px-6 lg:px-12 py-8 space-y-8">
                 {/* Hero dark card */}
                 <section className="bg-secondary text-primary-foreground rounded-3xl shadow-card px-10 lg:px-14 py-12 lg:py-14">
                     <p className="text-xs font-semibold tracking-[0.25em] text-primary-foreground/60 mb-5">
@@ -143,7 +143,7 @@ const Leaderboard = () => {
 
                         {/* 1st place */}
                         {displayLeaders[0] && (
-                            <div className="lg:h-64 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary rounded-2xl shadow-lg p-7 flex flex-col justify-end">
+                            <div className="lg:h-64 bg-linear-to-br from-primary/20 to-primary/5 border-2 border-primary rounded-2xl shadow-lg p-7 flex flex-col justify-end">
                                 <div className="text-center">
                                     <div className="text-5xl mb-2">👑</div>
                                     <p className="text-xl font-bold text-foreground">{displayLeaders[0].name}</p>
