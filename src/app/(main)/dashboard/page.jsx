@@ -1,0 +1,240 @@
+
+
+const Hero = () => (
+  <section className="grid lg:grid-cols-[1.35fr_1fr] gap-6 px-6 lg:px-12 mt-8 ">
+    {/* Left light card */}
+    <div className="bg-card rounded-3xl shadow-card p-10 lg:p-14 bg-linear-to-br from-neutral to-neutral/80">
+      <p className="text-xs font-semibold tracking-[0.2em] text-primary mb-6">
+        SMIT GRAND CODING NIGHT 2026
+      </p>
+      <h1 className="text-5xl lg:text-[64px] leading-[1.02] font-extrabold text-foreground tracking-tight">
+        Find help faster.
+        <br />
+        Become help that
+        <br />
+        matters.
+      </h1>
+      <p className="mt-7 text-muted-foreground text-[15px] max-w-lg leading-relaxed">
+        HelpHub AI is a community-powered support network for students, mentors,
+        creators, and builders. Ask for help, offer help, track impact, and let AI surface
+        smarter matches across the platform.
+      </p>
+
+      <div className="mt-8 flex flex-wrap gap-3">
+        <button className="px-6 py-3 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
+          Open product demo
+        </button>
+        <button className="px-6 py-3 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition">
+          Post a request
+        </button>
+      </div>
+
+      <div className="mt-12 grid grid-cols-3 gap-4">
+        {[
+          { label: "MEMBERS", value: "384+", desc: "Students, mentors, and helpers in the loop." },
+          { label: "REQUESTS", value: "72+", desc: "Support posts shared across learning journeys." },
+          { label: "SOLVED", value: "69+", desc: "Problems resolved through fast community action." },
+        ].map((s) => (
+          <div key={s.label} className="bg-background/70 rounded-2xl p-5 border border-border/60">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-primary">{s.label}</p>
+            <p className="text-3xl font-bold text-foreground mt-2">{s.value}</p>
+            <p className="text-xs text-muted-foreground mt-3 leading-relaxed">{s.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Right dark card */}
+    <div className="relative bg-secondary text-white rounded-3xl shadow-card p-8 lg:p-10 overflow-hidden">
+      <div className="absolute top-8 right-8 h-16 w-16 rounded-full orb-yellow shadow-lg" />
+      <p className="text-xs font-semibold tracking-[0.2em] text-primary mb-5">LIVE PRODUCT FEEL</p>
+      <h2 className="text-3xl lg:text-[40px] leading-[1.05] font-extrabold tracking-tight">
+        More than a form.
+        <br />
+        More like an
+        <br />
+        ecosystem.
+      </h2>
+      <p className="mt-5 text-sm text-dark-card-foreground/70 leading-relaxed">
+        A polished multi-page experience inspired by product platforms, with AI summaries,
+        trust scores, contribution signals, notifications, and leaderboard momentum built
+        directly in HTML, CSS, JavaScript, and LocalStorage.
+      </p>
+
+      <div className="mt-7 space-y-3">
+        {[
+          {
+            t: "AI request intelligence",
+            d: "Auto-categorization, urgency detection, tags, rewrite suggestions, and trend snapshots.",
+          },
+          {
+            t: "Community trust graph",
+            d: "Badges, helper rankings, trust score boosts, and visible contribution history.",
+          },
+          {
+            t: "100%",
+            d: "Top trust score currently active across the sample mentor network.",
+          },
+        ].map((b) => (
+          <div key={b.t} className="bg-neutral text-secondary-foreground rounded-2xl p-5">
+            <p className="font-semibold text-[15px]">{b.t}</p>
+            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{b.d}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+const CoreFlow = () => (
+  <section className="px-6 lg:px-12 mt-24">
+    <p className="text-xs font-semibold tracking-[0.2em] text-primary">CORE FLOW</p>
+    <div className="flex flex-wrap items-end justify-between gap-4 mt-3">
+      <h2 className="text-3xl lg:text-[42px] font-extrabold text-foreground tracking-tight">
+        From struggling alone to solving together
+      </h2>
+      <button className="px-5 py-2.5 rounded-full bg-card border border-border text-sm font-medium hover:bg-secondary transition">
+        Try onboarding AI
+      </button>
+    </div>
+
+    <div className="grid md:grid-cols-3 gap-5 mt-8">
+      {[
+        {
+          t: "Ask for help clearly",
+          d: "Create structured requests with category, urgency, AI suggestions, and tags that attract the right people.",
+        },
+        {
+          t: "Discover the right people",
+          d: "Use the explore feed, helper lists, notifications, and messaging to move quickly once a match happens.",
+        },
+        {
+          t: "Track real contribution",
+          d: "Trust scores, badges, solved requests, and rankings help the community recognize meaningful support.",
+        },
+      ].map((c) => (
+        <div key={c.t} className="bg-neutral rounded-2xl p-7 shadow-card">
+          <p className="font-semibold text-foreground text-[15px]">{c.t}</p>
+          <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{c.d}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+);
+
+const TagPill = ({ label, color }) => {
+  const cls =
+    color === "red"
+      ? "bg-tag-red-bg text-tag-red-fg"
+      : color === "green"
+      ? "bg-tag-green-bg text-tag-green-fg"
+      : "bg-tag-teal-bg text-tag-teal-fg";
+  return <span className={`px-3 py-1 rounded-full text-[11px] font-medium ${cls}`}>{label}</span>;
+};
+
+const RequestCard = ({
+  tags,
+  title,
+  body,
+  chips,
+  author,
+  meta,
+}) => (
+  <div className="bg-neutral rounded-2xl p-6 shadow-card flex flex-col">
+    <div className="flex flex-wrap gap-2">
+      {tags.map((t) => (
+        <TagPill key={t.label} {...t} />
+      ))}
+    </div>
+    <p className="font-semibold text-foreground mt-4">{title}</p>
+    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{body}</p>
+    {chips && (
+      <div className="flex flex-wrap gap-2 mt-4">
+        {chips.map((c) => (
+          <span
+            key={c}
+            className="px-3 py-1 rounded-full text-[11px] font-medium bg-tag-teal-bg text-tag-teal-fg"
+          >
+            {c}
+          </span>
+        ))}
+      </div>
+    )}
+    <div className="flex items-end justify-between mt-6 pt-2">
+      <div>
+        <p className="font-semibold text-foreground text-sm">{author}</p>
+        <p className="text-xs text-muted-foreground mt-1">{meta}</p>
+      </div>
+      <button className="px-4 py-2 rounded-full bg-card border border-border text-xs font-medium hover:bg-secondary transition shrink-0">
+        Open details
+      </button>
+    </div>
+  </div>
+);
+
+const Featured = () => (
+  <section className="px-6 lg:px-12 mt-20">
+    <p className="text-xs font-semibold tracking-[0.2em] text-primary">FEATURED REQUESTS</p>
+    <div className="flex flex-wrap items-end justify-between gap-4 mt-3">
+      <h2 className="text-3xl lg:text-[42px] font-extrabold text-foreground tracking-tight">
+        Community problems currently in motion
+      </h2>
+      <button className="px-5 py-2.5 rounded-full bg-card border border-border text-sm font-medium hover:bg-secondary transition">
+        View full feed
+      </button>
+    </div>
+
+    <div className="grid md:grid-cols-3 gap-5 mt-8">
+      <RequestCard
+        tags={[
+          { label: "Web Development", color: "teal" },
+          { label: "High", color: "red" },
+          { label: "Solved", color: "green" },
+        ]}
+        title="Need help"
+        body="helpn needed"
+        author="Ayesha Khan"
+        meta="Karachi • 1 helper interested"
+      />
+      <RequestCard
+        tags={[
+          { label: "Web Development", color: "teal" },
+          { label: "High", color: "red" },
+          { label: "Solved", color: "green" },
+        ]}
+        title="Need help making my portfolio responsive before demo day"
+        body="My HTML/CSS portfolio breaks on tablets and I need layout guidance before tomorrow evening."
+        chips={["HTML/CSS", "Responsive", "Portfolio"]}
+        author="Sara Noor"
+        meta="Karachi • 1 helper interested"
+      />
+      <RequestCard
+        tags={[
+          { label: "Design", color: "teal" },
+          { label: "Medium", color: "teal" },
+          { label: "Open", color: "teal" },
+        ]}
+        title="Looking for Figma feedback on a volunteer event poster"
+        body="I have a draft poster for a campus community event and want sharper hierarchy, spacing, and CTA copy."
+        chips={["Figma", "Poster", "Design Review"]}
+        author="Ayesha Khan"
+        meta="Lahore • 1 helper interested"
+      />
+    </div>
+
+    <p className="text-xs text-muted-foreground text-center mt-16 pb-10">
+      HelpHub AI is built as a premium-feel, multi-page community support product using HTML,
+      CSS, JavaScript, and LocalStorage.
+    </p>
+  </section>
+);
+
+const Index = () => (
+  <main className="min-h-screen bg-linear-to-br from-tertiary from-5% to-neutral to-90%">
+    <Hero />
+    <CoreFlow />
+    <Featured />
+  </main>
+);
+
+export default Index;

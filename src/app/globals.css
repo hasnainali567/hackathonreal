@@ -5,8 +5,16 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-neutral: var(--neutral);
+  --color-tertiary: var(--tertiary);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-tag-green-bg: hsl(var(--tag-green-bg));
+  --color-tag-green-fg: hsl(var(--tag-green-fg));
+  --color-tag-red-bg: hsl(var(--tag-red-bg));
+  --color-tag-red-fg: hsl(var(--tag-red-fg));
+  --color-tag-teal-bg: hsl(var(--tag-teal-bg));
+  --color-tag-teal-fg: hsl(var(--tag-teal-fg));
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
@@ -55,9 +63,11 @@
   --card-foreground: oklch(0.148 0.004 228.8);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.148 0.004 228.8);
-  --primary: oklch(0.511 0.096 186.391);
+  --primary: #148572;
   --primary-foreground: oklch(0.984 0.014 180.72);
-  --secondary: oklch(0.967 0.001 286.375);
+  --secondary: #162C29;
+  --neutral: #F7F6F0;
+  --tertiary: #87B2A7;
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.963 0.002 197.1);
   --muted-foreground: oklch(0.56 0.021 213.5);
@@ -81,9 +91,17 @@
   --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
   --sidebar-border: oklch(0.925 0.005 214.3);
   --sidebar-ring: oklch(0.723 0.014 214.4);
+  --tag-green-bg: 150 45% 88%;
+  --tag-green-fg: 155 55% 25%;
+  --tag-red-bg: 5 75% 92%;
+  --tag-red-fg: 5 65% 45%;
+  --tag-teal-bg: 175 40% 88%;
+  --tag-teal-fg: 175 55% 25%;
 }
 
 .dark {
+  --color-neutral: var(--neutral);
+  --color-tertiary: var(--tertiary);
   --background: oklch(0.148 0.004 228.8);
   --foreground: oklch(0.987 0.002 197.1);
   --card: oklch(0.218 0.008 223.9);
@@ -121,9 +139,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
