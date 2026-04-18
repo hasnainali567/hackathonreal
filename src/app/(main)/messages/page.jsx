@@ -3,21 +3,6 @@
 
 import { useState, useEffect } from 'react';
 
-const FALLBACK_THREADS = [
-    {
-        from: 'Ayesha Khan',
-        to: 'You',
-        message: 'I can help review your React layout and suggest a cleaner component structure.',
-        time: '09:20 AM'
-    },
-    {
-        from: 'Hamza Ali',
-        to: 'You',
-        message: 'Shared the backend API checklist you can follow to finish the request flow.',
-        time: 'Yesterday'
-    }
-];
-
 const MessageThread = ({ from, to, message, time }) => (
     <div className="pb-5 bg-white p-4 rounded-2xl shadow-soft">
         <p className="font-semibold text-foreground text-sm">{from} — {to}</p>
@@ -35,19 +20,25 @@ const Messages = () => {
     const [sendLoading, setSendLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
 
     // Fetch message threads
     useEffect(() => {
         const fetchMessages = async () => {
             try {
                 setLoading(true);
-                const res = await fetch('/api/messages');
+                const storedUser = localStorage.getItem('user');
+                const userData = storedUser ? JSON.parse(storedUser) : null;
+                setCurrentUser(userData);
+
+                const viewerEmail = userData?.email || '';
+                const res = await fetch(`/api/messages${viewerEmail ? `?viewerEmail=${encodeURIComponent(viewerEmail)}` : ''}`);
                 if (!res.ok) throw new Error('Failed to fetch messages');
                 const data = await res.json();
                 
                 const mappedThreads = (data.threads || data.data || []).map(t => ({
-                    from: t.sender?.name || 'Unknown',
-                    to: t.recipient?.name || 'Unknown',
+                    from: t.fromName || t.sender?.name || 'Unknown',
+                    to: t.toName || t.recipient?.name || 'Unknown',
                     message: t.content || '',
                     time: t.createdAt ? new Date(t.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : new Date().toLocaleTimeString()
                 }));
@@ -57,19 +48,13 @@ const Messages = () => {
                 const recipients = data.users || data.recipients || [];
                 setRecipientOptions(recipients);
                 if (recipients.length > 0) {
-                    setSelectedRecipient(recipients[0].name || recipients[0].username);
-                } else if (mappedThreads.length > 0) {
-                    setSelectedRecipient(mappedThreads[0].from === 'You' ? mappedThreads[0].to : mappedThreads[0].from);
+                    setSelectedRecipient(recipients[0].email || recipients[0].name || recipients[0].username);
                 }
             } catch (err) {
                 console.error('Error fetching messages:', err);
                 setError(null);
-                setThreads(FALLBACK_THREADS);
-                setRecipientOptions([
-                    { id: 'demo-1', name: 'Ayesha Khan' },
-                    { id: 'demo-2', name: 'Hamza Ali' }
-                ]);
-                setSelectedRecipient('Ayesha Khan');
+                setThreads([]);
+                setRecipientOptions([]);
             } finally {
                 setLoading(false);
             }
@@ -94,9 +79,11 @@ const Messages = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    recipientName: selectedRecipient,
+                    senderEmail: currentUser?.email || '',
+                    senderName: currentUser?.name || 'You',
+                    recipientEmail: selectedRecipient,
+                    recipientName: recipientOptions.find((user) => (user.email || user.name) === selectedRecipient)?.name || selectedRecipient,
                     content: messageText,
-                    sender: 'current_user_demo', // Replace with actual user
                 })
             });
 
@@ -198,10 +185,10 @@ const Messages = () => {
                                     onChange={(e) => setSelectedRecipient(e.target.value)}
                                     className="w-full px-5 py-3.5 rounded-full bg-background/60 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                                 >
-                                    <option>Select recipient</option>
+                                    <option value="">Select helper</option>
                                     {recipientOptions.map((user) => (
-                                        <option key={user.id} value={user.name || user.username}>
-                                            {user.name || user.username}
+                                        <option key={user.id || user.email || user.name} value={user.email || user.name}>
+                                            {user.name || user.username} {user.role ? `(${user.role})` : ''}
                                         </option>
                                     ))}
                                 </select>

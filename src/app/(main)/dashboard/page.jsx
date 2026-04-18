@@ -1,6 +1,10 @@
 
 import Link from "next/link";
 import { Suspense } from "react";
+import { connectDB } from '@/lib/mongoose';
+import Request from '@/lib/models/Request';
+
+export const dynamic = 'force-dynamic';
 
 const Hero = () => (
   <section className="grid lg:grid-cols-[1.35fr_1fr] gap-6 px-6 lg:px-12 mt-8 ">
@@ -174,77 +178,62 @@ const RequestCard = ({
   </Link>
 );
 
+const FALLBACK_REQUESTS = [
+  {
+    _id: 'fallback-1',
+    id: 'fallback-1',
+    category: 'web',
+    urgency: 'high',
+    status: 'open',
+    title: 'Need help with React hooks implementation',
+    description: 'I\'m struggling to understand useContext and useReducer. Can someone explain with a practical example?',
+    tags: ['React', 'Hooks', 'JavaScript'],
+    author: 'Ayesha Khan',
+    location: 'Karachi',
+    helpersInterested: [1, 2],
+  },
+  {
+    _id: 'fallback-2',
+    id: 'fallback-2',
+    category: 'backend',
+    urgency: 'medium',
+    status: 'open',
+    title: 'Backend API design best practices',
+    description: 'Looking for guidance on structuring REST APIs for scalability. What are the best practices?',
+    tags: ['REST API', 'Node.js', 'Architecture'],
+    author: 'Hassan Ali',
+    location: 'Islamabad',
+    helpersInterested: [1],
+  },
+  {
+    _id: 'fallback-3',
+    id: 'fallback-3',
+    category: 'design',
+    urgency: 'low',
+    status: 'open',
+    title: 'Mobile app UI/UX feedback needed',
+    description: 'Built a fitness tracking app and need design feedback. Specifically about the onboarding flow.',
+    tags: ['UI/UX', 'Mobile', 'Design'],
+    author: 'Sara Iqbal',
+    location: 'Lahore',
+    helpersInterested: [],
+  },
+];
+
 async function FeaturedRequests() {
-  let requests = [];
-  let error = null;
-  
-  try {
-    // Try relative URL first (Next.js will handle port correctly)
-    const res = await fetch('/api/requests?limit=10', {
-      cache: 'no-store',
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
-    if (!res.ok) {
-      throw new Error(`API returned ${res.status}`);
-    }
-    
-    const response = await res.json();
-    
-    // Extract data from response
-    if (response.data && Array.isArray(response.data)) {
-      requests = response.data.slice(0, 3);
-    } else if (Array.isArray(response)) {
-      requests = response.slice(0, 3);
-    }
-    
-  } catch (err) {
-    console.error('Error fetching requests:', err.message);
-    error = err.message;
-  }
+  await connectDB();
 
-  // If no requests, try to seed with sample data
-  if (requests.length === 0 && !error) {
-    try {
-      console.log('No requests found. Seeding with sample data...');
-      const seedRes = await fetch('/api/requests/seed', {
-        method: 'POST',
-        cache: 'no-store'
-      });
-      
-      if (seedRes.ok) {
-        // Retry fetching after seeding
-        const retryRes = await fetch('/api/requests?limit=10', {
-          cache: 'no-store',
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (retryRes.ok) {
-          const response = await retryRes.json();
-          requests = (response.data || response).slice(0, 3);
-        }
-      }
-    } catch (seedErr) {
-      console.error('Seeding error:', seedErr.message);
-    }
-  }
+  const requestsFromDb = await Request.find({})
+    .populate('author', 'name location trustScore contributions avgRating skills')
+    .sort({ createdAt: -1 })
+    .limit(3)
+    .lean();
 
-  if (requests.length === 0) {
-    return (
-      <div className="grid md:grid-cols-3 gap-5 mt-8">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-neutral rounded-2xl p-6 shadow-card h-64 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">No requests available</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{error || 'Loading data...'}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const requests = (requestsFromDb.length > 0 ? requestsFromDb : FALLBACK_REQUESTS).map((req) => ({
+    ...req,
+    id: req._id?.toString() || req.id,
+    _id: req._id?.toString() || req.id,
+  }));
 
   return (
     <div className="grid md:grid-cols-3 gap-5 mt-8">

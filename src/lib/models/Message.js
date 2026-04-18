@@ -4,13 +4,35 @@ const messageSchema = new mongoose.Schema(
   {
     from: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
+      ref: 'User'
+    },
+    fromEmail: {
+      type: String,
+      index: true,
+      lowercase: true,
+      trim: true,
+      default: ''
+    },
+    fromName: {
+      type: String,
+      trim: true,
+      default: ''
     },
     to: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
+      ref: 'User'
+    },
+    toEmail: {
+      type: String,
+      index: true,
+      lowercase: true,
+      trim: true,
+      default: ''
+    },
+    toName: {
+      type: String,
+      trim: true,
+      default: ''
     },
     request: {
       type: mongoose.Schema.Types.ObjectId,
@@ -35,6 +57,7 @@ const messageSchema = new mongoose.Schema(
 );
 
 // Add indexes for efficient querying
+messageSchema.index({ fromEmail: 1, toEmail: 1 });
 messageSchema.index({ from: 1, to: 1 });
 messageSchema.index({ request: 1 });
 messageSchema.index({ createdAt: -1 });

@@ -1,89 +1,36 @@
 import { NextResponse } from 'next/server';
-
-// Mock leaderboard data
-const leaderboardData = [
-  {
-    rank: 1,
-    userId: "user_1",
-    name: "Ayesha Khan",
-    location: "Karachi",
-    trustScore: 100,
-    contributions: 47,
-    helpsGiven: 45,
-    avgRating: 4.9,
-    badges: ["Design Ally", "Fast Responder", "Top Mentor"]
-  },
-  {
-    rank: 2,
-    userId: "user_2",
-    name: "Hassan Ali",
-    location: "Islamabad",
-    trustScore: 98,
-    contributions: 38,
-    helpsGiven: 35,
-    avgRating: 4.8,
-    badges: ["Code Master", "Great Communicator"]
-  },
-  {
-    rank: 3,
-    userId: "user_3",
-    name: "Sara Noor",
-    location: "Lahore",
-    trustScore: 96,
-    contributions: 32,
-    helpsGiven: 30,
-    avgRating: 4.7,
-    badges: ["Fast Responder", "Patient Teacher"]
-  },
-  {
-    rank: 4,
-    userId: "user_4",
-    name: "Ali Ahmed",
-    location: "Karachi",
-    trustScore: 94,
-    contributions: 28,
-    helpsGiven: 26,
-    avgRating: 4.6,
-    badges: ["Rising Star"]
-  },
-  {
-    rank: 5,
-    userId: "user_5",
-    name: "Fatima Khan",
-    location: "Rawalpindi",
-    trustScore: 92,
-    contributions: 24,
-    helpsGiven: 22,
-    avgRating: 4.5,
-    badges: ["Newcomer Star"]
-  },
-  {
-    rank: 6,
-    userId: "user_6",
-    name: "Muhammad Hassan",
-    location: "Multan",
-    trustScore: 90,
-    contributions: 20,
-    helpsGiven: 18,
-    avgRating: 4.4,
-    badges: ["Helpful"]
-  },
-];
+import { connectDB } from '@/lib/mongoose';
+import User from '@/lib/models/User';
 
 // GET /api/users/leaderboard - Get top helpers
 export async function GET(request) {
   try {
+    await connectDB();
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const category = searchParams.get("category"); // optional: filter by category
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
 
-    // Return top helpers based on limit
-    const topHelpers = leaderboardData.slice(0, Math.min(limit, leaderboardData.length));
+    const topHelpers = await User.find({ isActive: true })
+      .select('name location trustScore contributions helpsGiven avgRating badges role skills')
+      .sort({ trustScore: -1, contributions: -1, createdAt: -1 })
+      .limit(Number.isNaN(limit) ? 10 : limit)
+      .lean();
 
     return NextResponse.json({
       success: true,
-      data: topHelpers,
-      total_helpers: leaderboardData.length,
+      data: topHelpers.map((user, index) => ({
+        rank: index + 1,
+        userId: user._id?.toString(),
+        name: user.name,
+        location: user.location || 'Pakistan',
+        trustScore: user.trustScore || 0,
+        contributions: user.contributions || 0,
+        helpsGiven: user.helpsGiven || user.contributions || 0,
+        avgRating: user.avgRating || 0,
+        badges: user.badges || [],
+        role: user.role || 'both',
+        skills: user.skills || []
+      })),
+      total_helpers: topHelpers.length,
       message: `Showing top ${topHelpers.length} helpers ranked by contributions and trust score`
     });
   } catch (error) {

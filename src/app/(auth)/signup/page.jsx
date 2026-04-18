@@ -15,13 +15,6 @@ const Field = ({ label, children }) => (
 const inputCls =
     "w-full h-12 rounded-xl bg-background/60 border border-border px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition";
 
-const demoUsers = [
-    { name: 'Ayesha Khan', email: 'ayesha@helphub.ai' },
-    { name: 'Hamza Ali', email: 'hamza@helphub.ai' },
-    { name: 'Sara Iqbal', email: 'sara@helphub.ai' },
-    { name: 'Bilal Ahmed', email: 'bilal@helphub.ai' }
-];
-
 const Auth = () => {
     const router = useRouter();
     const [formData, setFormData] = useState({
@@ -30,6 +23,7 @@ const Auth = () => {
         password: 'demo123',
         role: 'Both'
     });
+    const [helpers, setHelpers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -40,6 +34,21 @@ const Auth = () => {
             router.push('/dashboard');
         }
     }, [router]);
+
+    useEffect(() => {
+        const loadHelpers = async () => {
+            try {
+                const res = await fetch('/api/users/helpers');
+                if (!res.ok) return;
+                const data = await res.json();
+                setHelpers(Array.isArray(data.data) ? data.data : []);
+            } catch (err) {
+                console.error('Failed to load helpers:', err);
+            }
+        };
+
+        loadHelpers();
+    }, []);
 
     const handleUserSelect = (selectedUser) => {
         setFormData({
@@ -61,6 +70,23 @@ const Auth = () => {
         setError(null);
 
         try {
+            await fetch('/api/users/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.username,
+                    email: formData.email,
+                    location: 'Pakistan',
+                    role: formData.role,
+                    skills: ['JavaScript', 'React', 'Node.js', 'Design'],
+                    interests: ['Web Development', 'Mentoring'],
+                    trustScore: 75,
+                    contributions: 12,
+                    avgRating: 4.5,
+                    badges: ['Fast Responder']
+                })
+            });
+
             // For demo purposes, create session directly in localStorage
             const userData = {
                 _id: Math.random().toString(36).substring(7),
@@ -141,20 +167,36 @@ const Auth = () => {
                     )}
 
                     <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                        <Field label="Select demo user">
+                        <Field label="Select helper profile">
                             <select
                                 value={formData.username}
                                 onChange={(e) => {
-                                    const selected = demoUsers.find(u => u.name === e.target.value);
+                                    const selected = helpers.find(u => u.name === e.target.value);
                                     if (selected) handleUserSelect(selected);
                                 }}
                                 className={inputCls}
                             >
-                                <option value="">Choose a user</option>
-                                {demoUsers.map(user => (
-                                    <option key={user.name} value={user.name}>{user.name}</option>
-                                ))}
+                                <option value="">Choose a helper or both-role user</option>
+                                {helpers.length > 0 ? (
+                                    helpers.map(user => (
+                                        <option key={user.email || user.name} value={user.name}>
+                                            {user.name} {user.role ? `(${user.role})` : ''}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option value="" disabled>No helper profiles available yet</option>
+                                )}
                             </select>
+                        </Field>
+
+                        <Field label="Full name">
+                            <input
+                                type="text"
+                                value={formData.username}
+                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                placeholder="Your name"
+                                className={inputCls}
+                            />
                         </Field>
 
                         <Field label="Role selection">

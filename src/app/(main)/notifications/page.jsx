@@ -2,41 +2,6 @@
 
 import { useState, useEffect } from 'react';
 
-const FALLBACK_NOTIFICATIONS = [
-    {
-        id: 'notif-1',
-        type: 'new-request',
-        title: 'New request matches your skills',
-        message: 'A React hooks request in Karachi is looking for help from someone with web experience.',
-        time: '5 minutes ago',
-        isRead: false,
-    },
-    {
-        id: 'notif-2',
-        type: 'help-offer',
-        title: 'Someone offered help on your request',
-        message: 'A mentor responded to your frontend layout request and wants to start a conversation.',
-        time: '18 minutes ago',
-        isRead: false,
-    },
-    {
-        id: 'notif-3',
-        type: 'status-change',
-        title: 'Request marked in progress',
-        message: 'Your backend API question is now being worked on by a community helper.',
-        time: '1 hour ago',
-        isRead: true,
-    },
-    {
-        id: 'notif-4',
-        type: 'message',
-        title: 'New message from a helper',
-        message: 'You received a follow-up message with a checklist and next steps.',
-        time: 'Today',
-        isRead: true,
-    },
-];
-
 const Notification = ({ type, title, message, time, isRead, onRead }) => {
     const getIcon = () => {
         if (type === 'new-request') return '🆕';
@@ -72,12 +37,18 @@ const Notification = ({ type, title, message, time, isRead, onRead }) => {
 const Notifications = () => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState(null);
 
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
                 setLoading(true);
-                const res = await fetch('/api/notifications');
+                const storedUser = localStorage.getItem('user');
+                const userData = storedUser ? JSON.parse(storedUser) : null;
+                setCurrentUser(userData);
+
+                const userEmail = userData?.email || '';
+                const res = await fetch(`/api/notifications${userEmail ? `?userEmail=${encodeURIComponent(userEmail)}` : ''}`);
 
                 if (!res.ok) {
                     throw new Error('Failed to fetch notifications');
@@ -95,10 +66,10 @@ const Notifications = () => {
                     isRead: notif.isRead || false,
                 }));
 
-                setNotifications(mappedNotifications.length > 0 ? mappedNotifications : FALLBACK_NOTIFICATIONS);
+                setNotifications(mappedNotifications);
             } catch (err) {
                 console.error('Error fetching notifications:', err);
-                setNotifications(FALLBACK_NOTIFICATIONS);
+                setNotifications([]);
             } finally {
                 setLoading(false);
             }
@@ -125,9 +96,10 @@ const Notifications = () => {
 
     const markAllAsRead = async () => {
         try {
-            await fetch('/api/notifications/batch/read', {
+            await fetch('/api/notifications', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userEmail: currentUser?.email || '' })
             });
 
             setNotifications(notifications.map((n) => ({ ...n, isRead: true })));

@@ -4,8 +4,19 @@ const notificationSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
+      ref: 'User'
+    },
+    userEmail: {
+      type: String,
+      index: true,
+      lowercase: true,
+      trim: true,
+      default: ''
+    },
+    userName: {
+      type: String,
+      trim: true,
+      default: ''
     },
     type: {
       type: String,
@@ -43,6 +54,7 @@ const notificationSchema = new mongoose.Schema(
 );
 
 // Add indexes
+notificationSchema.index({ userEmail: 1, isRead: 1 });
 notificationSchema.index({ user: 1, isRead: 1 });
 notificationSchema.index({ createdAt: -1 });
 

@@ -43,17 +43,35 @@ const Login = () => {
         setError(null);
 
         try {
-            // For demo purposes, validate email and create session
             if (!formData.email.includes('@')) {
                 setError('Please enter a valid email address');
                 setLoading(false);
                 return;
             }
 
+            const userName = formData.email.split('@')[0];
+
+            await fetch('/api/users/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: userName,
+                    email: formData.email,
+                    location: 'Pakistan',
+                    role: 'Both',
+                    skills: ['JavaScript', 'React', 'Node.js', 'Design'],
+                    interests: ['Web Development', 'Mentoring'],
+                    trustScore: 75,
+                    contributions: 12,
+                    avgRating: 4.5,
+                    badges: ['Fast Responder']
+                })
+            });
+
             // Create demo user session from email
             const userData = {
                 _id: Math.random().toString(36).substring(7),
-                name: formData.email.split('@')[0],
+                name: userName,
                 email: formData.email,
                 role: 'Both',
                 location: 'Pakistan',
