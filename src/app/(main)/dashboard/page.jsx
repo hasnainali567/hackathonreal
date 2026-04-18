@@ -1,4 +1,6 @@
 
+import Link from "next/link";
+import { Suspense } from "react";
 
 const Hero = () => (
   <section className="grid lg:grid-cols-[1.35fr_1fr] gap-6 px-6 lg:px-12 mt-8 ">
@@ -21,12 +23,12 @@ const Hero = () => (
       </p>
 
       <div className="mt-8 flex flex-wrap gap-3">
-        <button className="px-6 py-3 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
-          Open product demo
-        </button>
-        <button className="px-6 py-3 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition">
+        <Link href="/ai-center" className="px-6 py-3 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition inline-block">
+          AI Center
+        </Link>
+        <Link href="/create-request" className="px-6 py-3 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition inline-block">
           Post a request
-        </button>
+        </Link>
       </div>
 
       <div className="mt-12 grid grid-cols-3 gap-4">
@@ -93,9 +95,9 @@ const CoreFlow = () => (
       <h2 className="text-3xl lg:text-[42px] font-extrabold text-foreground tracking-tight">
         From struggling alone to solving together
       </h2>
-      <button className="px-5 py-2.5 rounded-full bg-card border border-border text-sm font-medium hover:bg-secondary transition">
-        Try onboarding AI
-      </button>
+      <Link href="/create-request" className="px-5 py-2.5 rounded-full bg-card border border-border text-sm font-medium hover:bg-secondary transition inline-block">
+        Start now
+      </Link>
     </div>
 
     <div className="grid md:grid-cols-3 gap-5 mt-8">
@@ -133,6 +135,7 @@ const TagPill = ({ label, color }) => {
 };
 
 const RequestCard = ({
+  id,
   tags,
   title,
   body,
@@ -140,37 +143,131 @@ const RequestCard = ({
   author,
   meta,
 }) => (
-  <div className="bg-neutral rounded-2xl p-6 shadow-card flex flex-col">
-    <div className="flex flex-wrap gap-2">
-      {tags.map((t) => (
-        <TagPill key={t.label} {...t} />
-      ))}
-    </div>
-    <p className="font-semibold text-foreground mt-4">{title}</p>
-    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{body}</p>
-    {chips && (
-      <div className="flex flex-wrap gap-2 mt-4">
-        {chips.map((c) => (
-          <span
-            key={c}
-            className="px-3 py-1 rounded-full text-[11px] font-medium bg-tag-teal-bg text-tag-teal-fg"
-          >
-            {c}
-          </span>
+  <Link href={`/request/${id}`}>
+    <div className="bg-neutral rounded-2xl p-6 shadow-card flex flex-col hover:shadow-lg transition cursor-pointer h-full">
+      <div className="flex flex-wrap gap-2">
+        {tags.map((t) => (
+          <TagPill key={t.label} {...t} />
         ))}
       </div>
-    )}
-    <div className="flex items-end justify-between mt-6 pt-2">
-      <div>
-        <p className="font-semibold text-foreground text-sm">{author}</p>
-        <p className="text-xs text-muted-foreground mt-1">{meta}</p>
+      <p className="font-semibold text-foreground mt-4">{title}</p>
+      <p className="text-sm text-muted-foreground mt-2 leading-relaxed flex-1">{body}</p>
+      {chips && (
+        <div className="flex flex-wrap gap-2 mt-4">
+          {chips.map((c) => (
+            <span
+              key={c}
+              className="px-3 py-1 rounded-full text-[11px] font-medium bg-tag-teal-bg text-tag-teal-fg"
+            >
+              {c}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex items-end justify-between mt-6 pt-2">
+        <div>
+          <p className="font-semibold text-foreground text-sm">{author}</p>
+          <p className="text-xs text-muted-foreground mt-1">{meta}</p>
+        </div>
       </div>
-      <button className="px-4 py-2 rounded-full bg-card border border-border text-xs font-medium hover:bg-secondary transition shrink-0">
-        Open details
-      </button>
     </div>
-  </div>
+  </Link>
 );
+
+async function FeaturedRequests() {
+  let requests = [];
+  let error = null;
+  
+  try {
+    // Try relative URL first (Next.js will handle port correctly)
+    const res = await fetch('/api/requests?limit=10', {
+      cache: 'no-store',
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!res.ok) {
+      throw new Error(`API returned ${res.status}`);
+    }
+    
+    const response = await res.json();
+    
+    // Extract data from response
+    if (response.data && Array.isArray(response.data)) {
+      requests = response.data.slice(0, 3);
+    } else if (Array.isArray(response)) {
+      requests = response.slice(0, 3);
+    }
+    
+  } catch (err) {
+    console.error('Error fetching requests:', err.message);
+    error = err.message;
+  }
+
+  // If no requests, try to seed with sample data
+  if (requests.length === 0 && !error) {
+    try {
+      console.log('No requests found. Seeding with sample data...');
+      const seedRes = await fetch('/api/requests/seed', {
+        method: 'POST',
+        cache: 'no-store'
+      });
+      
+      if (seedRes.ok) {
+        // Retry fetching after seeding
+        const retryRes = await fetch('/api/requests?limit=10', {
+          cache: 'no-store',
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (retryRes.ok) {
+          const response = await retryRes.json();
+          requests = (response.data || response).slice(0, 3);
+        }
+      }
+    } catch (seedErr) {
+      console.error('Seeding error:', seedErr.message);
+    }
+  }
+
+  if (requests.length === 0) {
+    return (
+      <div className="grid md:grid-cols-3 gap-5 mt-8">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-neutral rounded-2xl p-6 shadow-card h-64 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">No requests available</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{error || 'Loading data...'}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid md:grid-cols-3 gap-5 mt-8">
+      {requests.map((req) => (
+        <RequestCard
+          key={req._id || req.id}
+          id={req._id || req.id}
+          tags={[
+            { label: req.category || 'General', color: 'teal' },
+            { label: (req.urgency || 'medium').charAt(0).toUpperCase() + (req.urgency || 'medium').slice(1), 
+              color: req.urgency === 'high' ? 'red' : req.urgency === 'low' ? 'green' : 'teal' },
+            { label: req.status || 'Open', color: req.status === 'solved' ? 'green' : 'teal' },
+          ]}
+          title={req.title}
+          body={req.description?.substring(0, 80) + '...'}
+          chips={req.tags}
+          author={typeof req.author === 'object' ? req.author?.name : (req.author || 'Anonymous')}
+          meta={`${req.location || 'Pakistan'} • ${req.helpersInterested?.length || req.interestedHelpers?.length || 0} interested`}
+        />
+      ))}
+    </div>
+  );
+}
 
 const Featured = () => (
   <section className="px-6 lg:px-12 mt-20">
@@ -179,52 +276,24 @@ const Featured = () => (
       <h2 className="text-3xl lg:text-[42px] font-extrabold text-foreground tracking-tight">
         Community problems currently in motion
       </h2>
-      <button className="px-5 py-2.5 rounded-full bg-card border border-border text-sm font-medium hover:bg-secondary transition">
+      <Link href="/explore" className="px-5 py-2.5 rounded-full bg-card border border-border text-sm font-medium hover:bg-secondary transition inline-block">
         View full feed
-      </button>
+      </Link>
     </div>
 
-    <div className="grid md:grid-cols-3 gap-5 mt-8">
-      <RequestCard
-        tags={[
-          { label: "Web Development", color: "teal" },
-          { label: "High", color: "red" },
-          { label: "Solved", color: "green" },
-        ]}
-        title="Need help"
-        body="helpn needed"
-        author="Ayesha Khan"
-        meta="Karachi • 1 helper interested"
-      />
-      <RequestCard
-        tags={[
-          { label: "Web Development", color: "teal" },
-          { label: "High", color: "red" },
-          { label: "Solved", color: "green" },
-        ]}
-        title="Need help making my portfolio responsive before demo day"
-        body="My HTML/CSS portfolio breaks on tablets and I need layout guidance before tomorrow evening."
-        chips={["HTML/CSS", "Responsive", "Portfolio"]}
-        author="Sara Noor"
-        meta="Karachi • 1 helper interested"
-      />
-      <RequestCard
-        tags={[
-          { label: "Design", color: "teal" },
-          { label: "Medium", color: "teal" },
-          { label: "Open", color: "teal" },
-        ]}
-        title="Looking for Figma feedback on a volunteer event poster"
-        body="I have a draft poster for a campus community event and want sharper hierarchy, spacing, and CTA copy."
-        chips={["Figma", "Poster", "Design Review"]}
-        author="Ayesha Khan"
-        meta="Lahore • 1 helper interested"
-      />
-    </div>
+    <Suspense fallback={
+      <div className="grid md:grid-cols-3 gap-5 mt-8">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-neutral rounded-2xl p-6 shadow-card h-64 animate-pulse"></div>
+        ))}
+      </div>
+    }>
+      <FeaturedRequests />
+    </Suspense>
 
     <p className="text-xs text-muted-foreground text-center mt-16 pb-10">
-      HelpHub AI is built as a premium-feel, multi-page community support product using HTML,
-      CSS, JavaScript, and LocalStorage.
+      HelpHub AI is built as a premium-feel, multi-page community support product using Next.js,
+      MongoDB, and modern web technologies.
     </p>
   </section>
 );

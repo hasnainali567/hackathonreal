@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,20 +14,11 @@ const Field = ({ label, children }) => (
 const inputCls =
     "w-full h-12 rounded-xl bg-background/60 border border-border px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition";
 
-const demoUsers = [
-    { name: 'Ayesha Khan', email: 'ayesha@helphub.ai' },
-    { name: 'Hamza Ali', email: 'hamza@helphub.ai' },
-    { name: 'Sara Iqbal', email: 'sara@helphub.ai' },
-    { name: 'Bilal Ahmed', email: 'bilal@helphub.ai' }
-];
-
-const Auth = () => {
+const Login = () => {
     const router = useRouter();
     const [formData, setFormData] = useState({
-        username: '',
         email: '',
-        password: 'demo123',
-        role: 'Both'
+        password: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -41,19 +31,11 @@ const Auth = () => {
         }
     }, [router]);
 
-    const handleUserSelect = (selectedUser) => {
-        setFormData({
-            ...formData,
-            username: selectedUser.name,
-            email: selectedUser.email
-        });
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!formData.username || !formData.email || !formData.password) {
-            setError('Please select a user and fill all fields');
+        if (!formData.email || !formData.password) {
+            setError('Please fill in all fields');
             return;
         }
 
@@ -61,12 +43,19 @@ const Auth = () => {
         setError(null);
 
         try {
-            // For demo purposes, create session directly in localStorage
+            // For demo purposes, validate email and create session
+            if (!formData.email.includes('@')) {
+                setError('Please enter a valid email address');
+                setLoading(false);
+                return;
+            }
+
+            // Create demo user session from email
             const userData = {
                 _id: Math.random().toString(36).substring(7),
-                name: formData.username,
+                name: formData.email.split('@')[0],
                 email: formData.email,
-                role: formData.role,
+                role: 'Both',
                 location: 'Pakistan',
                 trustScore: 75,
                 contributions: 12,
@@ -77,7 +66,7 @@ const Auth = () => {
 
             localStorage.setItem('user', JSON.stringify(userData));
             localStorage.setItem('authToken', 'demo_token_' + userData._id);
-            localStorage.setItem('userRole', formData.role);
+            localStorage.setItem('userRole', 'Both');
 
             // Redirect to dashboard
             router.push('/dashboard');
@@ -95,24 +84,22 @@ const Auth = () => {
                 {/* Left dark card */}
                 <div className="bg-secondary text-primary-foreground rounded-3xl shadow-card p-10 lg:p-14">
                     <p className="text-xs font-semibold tracking-[0.2em] text-primary-foreground/70 mb-6">
-                        COMMUNITY ACCESS
+                        WELCOME BACK
                     </p>
                     <h1 className="text-4xl lg:text-[56px] leading-[1.05] font-extrabold tracking-tight">
-                        Enter the support
+                        Access your
                         <br />
-                        network.
+                        community profile.
                     </h1>
                     <p className="mt-6 text-primary-foreground/70 text-[15px] leading-relaxed max-w-md">
-                        Choose a demo identity, set your role, and jump into a multi-page
-                        product flow designed for asking, offering, and tracking help with
-                        a premium interface.
+                        Log in with your email and password to access your dashboard, manage requests, and connect with the community.
                     </p>
 
                     <ul className="mt-8 space-y-3 text-[15px] text-primary-foreground/80">
                         {[
-                            "Role-based entry for Need Help, Can Help, or Both",
-                            "Direct path into dashboard, requests, AI Center, and community feed",
-                            "Persistent demo session powered by localStorage",
+                            "Secure email-password authentication",
+                            "Seamless access to all your requests and contributions",
+                            "Personalized dashboard and community insights",
                         ].map((t) => (
                             <li key={t} className="flex gap-3">
                                 <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary-foreground/60 shrink-0" />
@@ -125,12 +112,12 @@ const Auth = () => {
                 {/* Right light card */}
                 <div className="bg-neutral rounded-3xl shadow-card p-10 lg:p-12">
                     <p className="text-xs font-semibold tracking-[0.2em] text-primary mb-5">
-                        LOGIN / SIGNUP
+                        LOGIN
                     </p>
                     <h2 className="text-4xl lg:text-[44px] leading-[1.1] font-extrabold text-foreground tracking-tight">
-                        Authenticate your
+                        Sign in to your
                         <br />
-                        community profile
+                        account
                     </h2>
 
                     {/* Error Message */}
@@ -141,67 +128,38 @@ const Auth = () => {
                     )}
 
                     <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                        <Field label="Select demo user">
-                            <select
-                                value={formData.username}
-                                onChange={(e) => {
-                                    const selected = demoUsers.find(u => u.name === e.target.value);
-                                    if (selected) handleUserSelect(selected);
-                                }}
+                        <Field label="Email address">
+                            <input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                placeholder="your@email.com"
                                 className={inputCls}
-                            >
-                                <option value="">Choose a user</option>
-                                {demoUsers.map(user => (
-                                    <option key={user.name} value={user.name}>{user.name}</option>
-                                ))}
-                            </select>
+                            />
                         </Field>
 
-                        <Field label="Role selection">
-                            <select
-                                value={formData.role}
-                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                        <Field label="Password">
+                            <input
+                                type="password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                placeholder="••••••••"
                                 className={inputCls}
-                            >
-                                <option>Both</option>
-                                <option>Need Help</option>
-                                <option>Can Help</option>
-                            </select>
+                            />
                         </Field>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <Field label="Email">
-                                <input
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    placeholder="your@email.com"
-                                    className={inputCls}
-                                />
-                            </Field>
-                            <Field label="Password">
-                                <input
-                                    type="password"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    placeholder="••••••••"
-                                    className={inputCls}
-                                />
-                            </Field>
-                        </div>
 
                         <button
                             type="submit"
-                            disabled={loading || !formData.username}
+                            disabled={loading}
                             className="w-full h-13 py-4 rounded-2xl bg-primary text-primary-foreground font-semibold text-[15px] hover:opacity-90 transition shadow-soft disabled:opacity-60"
                         >
-                            {loading ? '⏳ Authenticating...' : '✨ Continue to dashboard'}
+                            {loading ? '⏳ Signing in...' : '✨ Sign in to dashboard'}
                         </button>
 
                         <div className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground">Already have an account?</span>
-                            <Link href="/login" className="text-primary hover:text-primary/80 font-semibold transition">
-                                Sign in here
+                            <span className="text-muted-foreground">Don&apos;t have an account?</span>
+                            <Link href="/signup" className="text-primary hover:text-primary/80 font-semibold transition">
+                                Sign up here
                             </Link>
                         </div>
                     </form>
@@ -211,4 +169,4 @@ const Auth = () => {
     );
 };
 
-export default Auth;
+export default Login;

@@ -1,0 +1,58 @@
+import { NextResponse } from 'next/server';
+
+// Simple keyword-based tag suggestion (AI-like)
+const tagKeywords = {
+  frontend: ["react", "vue", "angular", "javascript", "typescript", "css", "html", "design", "ui", "component"],
+  backend: ["node", "express", "api", "database", "mongodb", "sql", "server", "authentication", "jwt", "database"],
+  mobile: ["react native", "flutter", "swift", "kotlin", "ios", "android", "mobile"],
+  design: ["figma", "design", "ui/ux", "wireframe", "prototype", "adobe", "illustration", "branding"],
+  devops: ["docker", "kubernetes", "aws", "deployment", "ci/cd", "git", "devops", "infrastructure"],
+  career: ["interview", "resume", "job", "portfolio", "networking", "career", "internship"],
+};
+
+function suggestTags(title, description) {
+  const text = `${title} ${description}`.toLowerCase();
+  const suggestedTags = new Set();
+
+  // Scan for keywords
+  for (const [category, keywords] of Object.entries(tagKeywords)) {
+    for (const keyword of keywords) {
+      if (text.includes(keyword)) {
+        suggestedTags.add(keyword.charAt(0).toUpperCase() + keyword.slice(1));
+      }
+    }
+  }
+
+  // Return unique suggestions (max 5)
+  return Array.from(suggestedTags).slice(0, 5);
+}
+
+// POST /api/ai/tags - Suggest tags based on title and description
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    const { title, description } = body;
+
+    if (!title) {
+      return NextResponse.json(
+        { error: "Title is required for tag suggestions" },
+        { status: 400 }
+      );
+    }
+
+    const suggestedTags = suggestTags(title, description || "");
+
+    return NextResponse.json({
+      success: true,
+      suggested_tags: suggestedTags,
+      message: suggestedTags.length > 0 
+        ? `Suggested ${suggestedTags.length} tags based on your request`
+        : "No specific tags detected. Add custom tags manually."
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to generate tag suggestions" },
+      { status: 500 }
+    );
+  }
+}
