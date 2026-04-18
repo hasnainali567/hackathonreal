@@ -16,6 +16,7 @@ const toPlainRequest = (doc) => {
       ? {
           _id: request.author._id?.toString() || request.author._id,
           name: request.author.name,
+          email: request.author.email || '',
           location: request.author.location || request.location || 'Unknown',
           trustScore: request.author.trustScore,
           contributions: request.author.contributions,
@@ -35,7 +36,7 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
-    const { title, description, category, urgency, tags, author, location } = body;
+    const { title, description, category, urgency, tags, author, authorName, authorEmail, location } = body;
 
     if (!title || !description) {
       return NextResponse.json(
@@ -44,13 +45,39 @@ export async function POST(request) {
       );
     }
 
+    let authorId = null;
+    let resolvedAuthorName = authorName || author || 'Anonymous';
+
+    const normalizedAuthorEmail = String(authorEmail || '').trim().toLowerCase();
+    if (normalizedAuthorEmail) {
+      const syncedUser = await User.findOneAndUpdate(
+        { email: normalizedAuthorEmail },
+        {
+          $set: {
+            name: resolvedAuthorName,
+            location: location || 'Pakistan',
+            role: 'both',
+            isActive: true
+          },
+          $setOnInsert: {
+            password: `demo-${Date.now()}`
+          }
+        },
+        { upsert: true, new: true, runValidators: true }
+      );
+
+      authorId = syncedUser._id;
+      resolvedAuthorName = syncedUser.name || resolvedAuthorName;
+    }
+
     const created = await Request.create({
       title,
       description,
       category: category || "general",
       urgency: urgency || "medium",
       tags: tags || [],
-      authorName: author || "Anonymous",
+      author: authorId,
+      authorName: resolvedAuthorName,
       location: location || "Unknown",
       status: "open",
       views: 0,
@@ -98,7 +125,7 @@ export async function GET(request) {
 
     const [requests, total] = await Promise.all([
       Request.find(query)
-        .populate('author', 'name location trustScore contributions avgRating skills')
+        .populate('author', 'name email location trustScore contributions avgRating skills')
         .sort({ createdAt: -1 })
         .limit(safeLimit)
         .lean(),

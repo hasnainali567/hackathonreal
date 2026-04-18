@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 const MessageThread = ({ from, to, message, time }) => (
     <div className="pb-5 bg-white p-4 rounded-2xl shadow-soft">
@@ -12,6 +13,7 @@ const MessageThread = ({ from, to, message, time }) => (
 );
 
 const Messages = () => {
+    const searchParams = useSearchParams();
     const [threads, setThreads] = useState([]);
     const [recipientOptions, setRecipientOptions] = useState([]);
     const [selectedRecipient, setSelectedRecipient] = useState('');
@@ -32,6 +34,8 @@ const Messages = () => {
                 setCurrentUser(userData);
 
                 const viewerEmail = userData?.email || '';
+                const requestedToEmail = String(searchParams.get('toEmail') || '').trim().toLowerCase();
+                const requestedToName = String(searchParams.get('toName') || '').trim();
                 const res = await fetch(`/api/messages${viewerEmail ? `?viewerEmail=${encodeURIComponent(viewerEmail)}` : ''}`);
                 if (!res.ok) throw new Error('Failed to fetch messages');
                 const data = await res.json();
@@ -46,9 +50,36 @@ const Messages = () => {
                 setThreads(mappedThreads);
                 
                 const recipients = data.users || data.recipients || [];
-                setRecipientOptions(recipients);
-                if (recipients.length > 0) {
-                    setSelectedRecipient(recipients[0].email || recipients[0].name || recipients[0].username);
+                const filteredRecipients = recipients.filter((user) => {
+                    const email = (user.email || '').toLowerCase();
+                    return !viewerEmail || email !== viewerEmail;
+                });
+
+                const hasRequestedRecipient = requestedToEmail && requestedToEmail !== String(viewerEmail).toLowerCase();
+                const requestedExists = filteredRecipients.some(
+                    (user) => String(user.email || '').toLowerCase() === requestedToEmail
+                );
+
+                const normalizedRecipients = hasRequestedRecipient && !requestedExists
+                    ? [
+                        {
+                            id: requestedToEmail,
+                            name: requestedToName || requestedToEmail,
+                            email: requestedToEmail,
+                            role: 'requester',
+                        },
+                        ...filteredRecipients,
+                      ]
+                    : filteredRecipients;
+
+                setRecipientOptions(normalizedRecipients);
+
+                if (hasRequestedRecipient) {
+                    setSelectedRecipient(requestedToEmail);
+                } else if (normalizedRecipients.length > 0) {
+                    setSelectedRecipient(normalizedRecipients[0].email || normalizedRecipients[0].name || normalizedRecipients[0].username);
+                } else {
+                    setSelectedRecipient('');
                 }
             } catch (err) {
                 console.error('Error fetching messages:', err);
@@ -61,13 +92,20 @@ const Messages = () => {
         };
 
         fetchMessages();
-    }, []);
+    }, [searchParams]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
         
         if (!messageText.trim() || !selectedRecipient) {
             setError('Please select a recipient and write a message');
+            return;
+        }
+
+        const senderEmail = (currentUser?.email || '').toLowerCase();
+        const recipientEmail = String(selectedRecipient || '').toLowerCase();
+        if (senderEmail && senderEmail === recipientEmail) {
+            setError('You cannot send a message to yourself');
             return;
         }
 
@@ -79,7 +117,7 @@ const Messages = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    senderEmail: currentUser?.email || '',
+                    senderEmail,
                     senderName: currentUser?.name || 'You',
                     recipientEmail: selectedRecipient,
                     recipientName: recipientOptions.find((user) => (user.email || user.name) === selectedRecipient)?.name || selectedRecipient,
@@ -87,12 +125,15 @@ const Messages = () => {
                 })
             });
 
-            if (!res.ok) throw new Error('Failed to send message');
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Failed to send message');
+            }
 
             // Add new message to threads
             const newThread = {
                 from: 'You',
-                to: selectedRecipient,
+                to: recipientOptions.find((user) => (user.email || user.name) === selectedRecipient)?.name || selectedRecipient,
                 message: messageText,
                 time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             };
@@ -208,7 +249,7 @@ const Messages = () => {
 
                         <button
                             type="submit"
-                            disabled={sendLoading}
+                            disabled={sendLoading || !selectedRecipient}
                             className="mt-8 w-full py-4 rounded-full bg-primary text-primary-foreground font-semibold text-base hover:opacity-90 transition-opacity shadow-soft disabled:opacity-60"
                         >
                             {sendLoading ? '⏳ Sending...' : '💬 Send'}

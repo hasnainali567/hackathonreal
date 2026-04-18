@@ -1,7 +1,32 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+
+const normalizeRole = (role) => {
+  if (!role) return 'both';
+  const normalized = String(role).toLowerCase();
+  if (normalized.includes('need')) return 'need-help';
+  if (normalized.includes('can')) return 'can-help';
+  return 'both';
+};
+
+const formatTimeAgo = (value) => {
+  if (!value) return 'Recently';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Recently';
+
+  const diffMs = Date.now() - date.getTime();
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diffMs < minute) return 'Just now';
+  if (diffMs < hour) return `${Math.floor(diffMs / minute)}m ago`;
+  if (diffMs < day) return `${Math.floor(diffMs / hour)}h ago`;
+  if (diffMs < 7 * day) return `${Math.floor(diffMs / day)}d ago`;
+  return date.toLocaleDateString();
+};
 
 const TagPill = ({ label, color }) => {
   const cls =
@@ -13,7 +38,7 @@ const TagPill = ({ label, color }) => {
   return <span className={`px-3 py-1 rounded-full text-[11px] font-medium ${cls}`}>{label}</span>;
 };
 
-const HelperCard = ({ name, location, trustScore, helps, rating, skills }) => (
+const HelperCard = ({ name, location, trustScore, helps, rating, skills, onMessageHelper }) => (
   <div className="bg-background/40 border border-border/60 rounded-2xl p-5">
     <div className="flex items-start justify-between mb-4">
       <div>
@@ -45,19 +70,71 @@ const HelperCard = ({ name, location, trustScore, helps, rating, skills }) => (
       </div>
     </div>
 
-    <button className="w-full mt-4 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition">
-      I can help
+    <button
+      onClick={onMessageHelper}
+      className="w-full mt-4 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition"
+    >
+      Message helper
     </button>
   </div>
 );
 
+const mapRequestForView = (data) => ({
+  title: data.title || 'Untitled Request',
+  description: data.description || '',
+  tags: [
+    { label: data.category || 'General', color: 'teal' },
+    {
+      label: data.urgency ? data.urgency.charAt(0).toUpperCase() + data.urgency.slice(1) : 'Medium',
+      color: data.urgency === 'high' ? 'red' : data.urgency === 'low' ? 'green' : 'teal'
+    },
+    { label: data.status || 'Open', color: 'teal' },
+  ],
+  author: typeof data.author === 'object' ? (data.author?.name || 'Anonymous') : (data.author || 'Anonymous'),
+  authorName: typeof data.author === 'object' ? data.author?.name : data.author,
+  authorEmail: typeof data.author === 'object' ? data.author?.email || '' : '',
+  location: data.location || 'Pakistan',
+  createdAt: data.createdAt || null,
+  postedTime: formatTimeAgo(data.createdAt),
+  views: data.views || 0,
+  helpersCount: data.interestedHelpers?.length || data.helpersInterested?.length || 0,
+  chips: data.tags || [],
+  aiSummary: data.aiSummary || 'AI summary not available yet.',
+  helpers: (data.interestedHelpers || data.helpersInterested || []).map((h) => ({
+    id: h._id?.toString?.() || h._id || '',
+    email: h.email || '',
+    name: h.name || 'Helper',
+    location: h.location || 'Pakistan',
+    trustScore: `${h.trustScore || 100}%`,
+    helps: h.contributions || 0,
+    rating: h.avgRating || 4.5,
+    skills: h.skills || [],
+  })),
+  status: data.status || 'Open',
+  urgency: data.urgency || 'medium',
+});
+
 const RequestDetail = () => {
   const params = useParams();
+  const router = useRouter();
   const requestId = params?.id;
   
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState('');
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      if (!stored) return;
+      setCurrentUser(JSON.parse(stored));
+    } catch (err) {
+      console.error('Failed to parse current user:', err);
+    }
+  }, []);
 
   useEffect(() => {
     if (!requestId) return;
@@ -73,35 +150,8 @@ const RequestDetail = () => {
         if (!res.ok) {
           throw new Error(data?.error || (res.status === 404 ? 'Request not found' : 'Failed to fetch request'));
         }
-        
-        // Map API response to component structure
-        setRequest({
-          title: data.title || 'Untitled Request',
-          description: data.description || '',
-          tags: [
-            { label: data.category || 'General', color: 'teal' },
-            { label: data.urgency ? data.urgency.charAt(0).toUpperCase() + data.urgency.slice(1) : 'Medium', 
-              color: data.urgency === 'high' ? 'red' : data.urgency === 'low' ? 'green' : 'teal' },
-            { label: data.status || 'Open', color: 'teal' },
-          ],
-          author: data.author || 'Anonymous',
-          location: data.location || 'Pakistan',
-          postedTime: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'Recently',
-          views: data.views || 0,
-          helpers: data.interestedHelpers?.length || 0,
-          chips: data.tags || [],
-          aiSummary: data.aiSummary || 'AI summary not available yet.',
-          helpers: (data.interestedHelpers || []).map((h) => ({
-            name: h.name || 'Helper',
-            location: h.location || 'Pakistan',
-            trustScore: `${h.trustScore || 100}%`,
-            helps: h.contributions || 0,
-            rating: h.avgRating || 4.5,
-            skills: h.skills || [],
-          })),
-          status: data.status || 'Open',
-          urgency: data.urgency || 'medium',
-        });
+
+        setRequest(mapRequestForView(data));
       } catch (err) {
         console.error('Error fetching request:', err);
         setError(err.message || 'Failed to load request details');
@@ -113,9 +163,151 @@ const RequestDetail = () => {
     fetchRequest();
   }, [requestId]);
 
+  useEffect(() => {
+    if (!request?.createdAt) return;
+
+    const timer = setInterval(() => {
+      setRequest((prev) => (prev ? { ...prev, postedTime: formatTimeAgo(prev.createdAt) } : prev));
+    }, 60 * 1000);
+
+    return () => clearInterval(timer);
+  }, [request?.createdAt]);
+
+  const role = normalizeRole(currentUser?.role);
+  const currentName = String(currentUser?.name || '').toLowerCase();
+  const currentEmail = String(currentUser?.email || '').toLowerCase();
+  const authorName = String(request?.authorName || '').toLowerCase();
+  const authorEmail = String(request?.authorEmail || '').toLowerCase();
+  const isOwner = Boolean(
+    (currentEmail && authorEmail && currentEmail === authorEmail) ||
+    (currentName && authorName && currentName === authorName)
+  );
+  const canHelp = role === 'can-help' || role === 'both';
+  const canRequestHelp = role === 'need-help' || role === 'both';
+  const hasExpressedInterest = Boolean(
+    currentUser?.email && request?.helpers?.some((helper) => (helper.email || '').toLowerCase() === currentUser.email.toLowerCase())
+  );
+
+  const handleCanHelp = async () => {
+    if (!currentUser?.email || !requestId) {
+      setActionMessage('Sign in with a valid account to help on requests.');
+      return;
+    }
+
+    if (hasExpressedInterest) {
+      setActionMessage('You already marked interest on this request.');
+      return;
+    }
+
+    setActionLoading(true);
+    setActionMessage('');
+
+    try {
+      const res = await fetch(`/api/requests/${requestId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'add_helper',
+          helperEmail: currentUser.email,
+          helperName: currentUser.name,
+        })
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload.error || 'Failed to register helper interest');
+      }
+
+      if (payload?.data) {
+        setRequest(mapRequestForView(payload.data));
+      }
+      setActionMessage('Great! You are now marked as interested to help.');
+    } catch (err) {
+      setActionMessage(err.message || 'Failed to register helper interest');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleMarkAsSolved = async () => {
+    if (!requestId || !currentUser) {
+      setActionMessage('Sign in to update request status.');
+      return;
+    }
+
+    setActionLoading(true);
+    setActionMessage('');
+
+    try {
+      const res = await fetch(`/api/requests/${requestId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'solved',
+          actorEmail: currentUser.email,
+          actorName: currentUser.name,
+        })
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload.error || 'Failed to mark request as solved');
+      }
+
+      if (payload?.data) {
+        setRequest(mapRequestForView(payload.data));
+      }
+      setActionMessage('Request marked as solved.');
+    } catch (err) {
+      setActionMessage(err.message || 'Failed to mark request as solved');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleContactRequester = () => {
+    const requesterEmail = String(request?.authorEmail || '').trim().toLowerCase();
+    const requesterName = String(request?.author || '').trim();
+
+    if (!requesterEmail) {
+      setActionMessage('Requester contact is not available for this request.');
+      return;
+    }
+
+    const params = new URLSearchParams({
+      toEmail: requesterEmail,
+      toName: requesterName || 'Requester',
+    });
+
+    router.push(`/messages?${params.toString()}`);
+  };
+
+  const handleMessageHelper = (helper) => {
+    const helperEmail = String(helper?.email || '').trim().toLowerCase();
+    const helperName = String(helper?.name || '').trim();
+    const currentEmailValue = String(currentUser?.email || '').trim().toLowerCase();
+
+    if (!helperEmail) {
+      setActionMessage('Helper contact is not available.');
+      return;
+    }
+
+    if (currentEmailValue && helperEmail === currentEmailValue) {
+      setActionMessage('You cannot message yourself.');
+      return;
+    }
+
+    const params = new URLSearchParams({
+      toEmail: helperEmail,
+      toName: helperName || 'Helper',
+    });
+
+    router.push(`/messages?${params.toString()}`);
+  };
+
   return (
     <div className="min-h-screen bg-canvas-grad">
-      <main className="max-w-[1280px] mx-auto px-6 lg:px-12 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-6 lg:px-12 py-8 space-y-8">
         {/* Loading State */}
         {loading && (
           <div className="space-y-4">
@@ -154,7 +346,7 @@ const RequestDetail = () => {
                 </div>
                 <div>
                   <p className="text-xs text-primary-foreground/60">ENGAGEMENT</p>
-                  <p className="text-sm font-semibold">{request.views} views • {request.helpers} interested</p>
+                    <p className="text-sm font-semibold">{request.views} views • {request.helpersCount} interested</p>
                 </div>
               </div>
             </section>
@@ -215,7 +407,11 @@ const RequestDetail = () => {
 
                     <div className="grid md:grid-cols-2 gap-4">
                       {request.helpers.map((helper) => (
-                        <HelperCard key={helper.name} {...helper} />
+                        <HelperCard
+                          key={`${helper.email || helper.name}`}
+                          {...helper}
+                          onMessageHelper={() => handleMessageHelper(helper)}
+                        />
                       ))}
                     </div>
                   </div>
@@ -226,15 +422,50 @@ const RequestDetail = () => {
               <div className="space-y-5">
                 {/* Action buttons */}
                 <div className="bg-card rounded-3xl shadow-card p-7 space-y-3">
-                  <button className="w-full px-6 py-4 rounded-full bg-primary text-primary-foreground font-semibold text-base hover:opacity-90 transition shadow-soft">
-                    I can help
-                  </button>
-                  <button className="w-full px-6 py-4 rounded-full bg-foreground text-background font-semibold text-base hover:opacity-90 transition">
-                    Contact requester
-                  </button>
-                  <button className="w-full px-6 py-4 rounded-full bg-background border border-border text-foreground font-semibold text-base hover:bg-background/80 transition">
-                    Mark as solved
-                  </button>
+                  {!currentUser && (
+                    <button className="w-full px-6 py-4 rounded-full bg-background border border-border text-foreground font-semibold text-base opacity-70 cursor-not-allowed">
+                      Sign in to take action
+                    </button>
+                  )}
+
+                  {currentUser && !isOwner && canHelp && (
+                    <button
+                      onClick={handleCanHelp}
+                      disabled={actionLoading || hasExpressedInterest}
+                      className="w-full px-6 py-4 rounded-full bg-primary text-primary-foreground font-semibold text-base hover:opacity-90 transition shadow-soft disabled:opacity-60"
+                    >
+                      {actionLoading ? 'Updating...' : hasExpressedInterest ? 'Already helping' : 'I can help'}
+                    </button>
+                  )}
+
+                  {currentUser && !isOwner && (
+                    <button
+                      onClick={handleContactRequester}
+                      className="w-full px-6 py-4 rounded-full bg-foreground text-background font-semibold text-base hover:opacity-90 transition"
+                    >
+                      Contact requester
+                    </button>
+                  )}
+
+                  {currentUser && isOwner && canRequestHelp && request.status !== 'solved' && (
+                    <button
+                      onClick={handleMarkAsSolved}
+                      disabled={actionLoading}
+                      className="w-full px-6 py-4 rounded-full bg-background border border-border text-foreground font-semibold text-base hover:bg-background/80 transition disabled:opacity-60"
+                    >
+                      {actionLoading ? 'Updating...' : 'Mark as solved'}
+                    </button>
+                  )}
+
+                  {currentUser && isOwner && request.status === 'solved' && (
+                    <button className="w-full px-6 py-4 rounded-full bg-tag-green-bg text-tag-green-fg font-semibold text-base cursor-default">
+                      Solved
+                    </button>
+                  )}
+
+                  {actionMessage && (
+                    <p className="text-xs text-muted-foreground px-2 pt-1">{actionMessage}</p>
+                  )}
                 </div>
 
                 {/* Request stats */}

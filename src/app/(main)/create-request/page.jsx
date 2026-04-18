@@ -143,6 +143,9 @@ const CreateRequest = () => {
         setError(null);
 
         try {
+            const storedUser = localStorage.getItem('user');
+            const currentUser = storedUser ? JSON.parse(storedUser) : null;
+
             const res = await fetch('/api/requests', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -152,8 +155,9 @@ const CreateRequest = () => {
                     category,
                     urgency: normalizeUrgency(urgency),
                     tags,
-                    author: 'user_demo', // Replace with real user ID
-                    location: 'Karachi'
+                    authorName: currentUser?.name || 'Anonymous',
+                    authorEmail: currentUser?.email || '',
+                    location: currentUser?.location || 'Karachi'
                 })
             });
 
@@ -184,7 +188,7 @@ const CreateRequest = () => {
 
     return (
         <div className="min-h-screen bg-canvas-grad">
-            <main className="max-w-[1280px] mx-auto px-6 lg:px-12 py-8 space-y-8">
+            <main className="max-w-7xl mx-auto px-6 lg:px-12 py-8 space-y-8">
                 {/* Hero dark card */}
                 <section className="bg-secondary text-primary-foreground rounded-3xl shadow-card px-10 lg:px-14 py-12 lg:py-14">
                     <p className="text-xs font-semibold tracking-[0.25em] text-primary-foreground/60 mb-5">

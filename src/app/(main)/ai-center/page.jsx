@@ -35,6 +35,26 @@ const toTitleCase = (value) => {
     return value.charAt(0).toUpperCase() + value.slice(1);
 };
 
+const urgencyWeight = { high: 92, medium: 74, low: 58 };
+
+const buildAiSignals = (request) => {
+    const urgency = request.urgency || 'medium';
+    const helpers = request.helpersInterested?.length || 0;
+    const titleLengthBoost = Math.min((request.title || '').length / 8, 10);
+    const confidence = Math.min(98, Math.round((urgencyWeight[urgency] || 70) + helpers * 2 + titleLengthBoost));
+    const helperMatch = Math.max(20, Math.min(99, Math.round(55 + helpers * 9 + (request.category === 'web' ? 6 : 0))));
+
+    const reasons = [
+        `${toTitleCase(urgency)} urgency signal detected`,
+        `${toTitleCase(request.category || 'general')} category trend is active`,
+        `${helpers} helper interest ${helpers === 1 ? 'signal' : 'signals'} recorded`
+    ];
+
+    return { confidence, helperMatch, reasons };
+};
+
+const isValidObjectId = (value) => /^[a-f0-9]{24}$/i.test(String(value || ''));
+
 const AICenter = async () => {
     await connectDB();
 
@@ -57,6 +77,10 @@ const AICenter = async () => {
 
     const topCategory = Object.entries(trendMap).sort((a, b) => b[1] - a[1])[0]?.[0] || 'general';
     const highUrgencyCount = requests.filter((req) => req.urgency === 'high').length;
+    const openRequests = requests.filter((req) => (req.status || 'open') === 'open').length;
+    const modelHealth = helperCount > 0 ? 'Stable' : 'Cold Start';
+    const modelVersion = 'Assist-Lite v0.9';
+    const lastInference = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     return (
         <div className="min-h-screen bg-canvas-grad">
@@ -93,6 +117,45 @@ const AICenter = async () => {
                     </div>
                 </section>
 
+                <section className="grid lg:grid-cols-[1.1fr_1fr] gap-5">
+                    <div className="bg-card rounded-2xl shadow-card p-6 lg:p-8">
+                        <p className="text-xs font-semibold tracking-[0.2em] text-primary mb-4">MODEL SNAPSHOT</p>
+                        <h3 className="text-2xl font-bold text-foreground">{modelVersion}</h3>
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Lightweight scoring mode is active. Signals are generated from urgency, category frequency, request freshness, and helper activity.
+                        </p>
+                        <div className="grid grid-cols-3 gap-3 mt-6">
+                            <div className="bg-background/50 rounded-xl p-3 border border-border/60">
+                                <p className="text-[10px] tracking-[0.18em] text-primary">HEALTH</p>
+                                <p className="text-sm font-semibold text-foreground mt-1">{modelHealth}</p>
+                            </div>
+                            <div className="bg-background/50 rounded-xl p-3 border border-border/60">
+                                <p className="text-[10px] tracking-[0.18em] text-primary">OPEN REQUESTS</p>
+                                <p className="text-sm font-semibold text-foreground mt-1">{openRequests}</p>
+                            </div>
+                            <div className="bg-background/50 rounded-xl p-3 border border-border/60">
+                                <p className="text-[10px] tracking-[0.18em] text-primary">LAST INFERENCE</p>
+                                <p className="text-sm font-semibold text-foreground mt-1">{lastInference}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-card rounded-2xl shadow-card p-6 lg:p-8">
+                        <p className="text-xs font-semibold tracking-[0.2em] text-primary mb-4">AI LOGIC HINTS</p>
+                        <div className="space-y-3">
+                            {[
+                                `Prioritize ${toTitleCase(topCategory)} requests with high urgency first`,
+                                `Escalate requests with low helper interest but high urgency`,
+                                `Boost matching for users tagged as can-help and both`
+                            ].map((tip) => (
+                                <div key={tip} className="rounded-xl bg-background/50 border border-border/60 px-4 py-3">
+                                    <p className="text-xs text-muted-foreground leading-relaxed">{tip}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
                 <section className="bg-card rounded-3xl shadow-card p-10 lg:p-12">
                     <p className="text-xs font-semibold tracking-[0.25em] text-primary mb-5">
                         AI RECOMMENDATIONS
@@ -102,7 +165,13 @@ const AICenter = async () => {
                     </h2>
 
                     <div className="mt-8 space-y-4">
-                        {recommendations.map((request) => (
+                        {recommendations.map((request) => {
+                            const signals = buildAiSignals(request);
+                            const requestId = request._id?.toString() || request.id;
+                            const canOpenRequest = isValidObjectId(requestId);
+                            const requestLink = canOpenRequest ? `/request/${requestId}` : '/explore';
+
+                            return (
                             <div key={request._id?.toString() || request.id} className="bg-background/40 border border-border/60 rounded-2xl p-6">
                                 <p className="font-semibold text-foreground text-sm">{request.title || 'Need help'}</p>
                                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
@@ -114,17 +183,42 @@ const AICenter = async () => {
                                         {toTitleCase(request.urgency || 'medium')}
                                     </span>
                                     <span className="px-3 py-1 rounded-full bg-tag-teal-bg text-tag-teal-fg text-xs font-medium">{toTitleCase(request.status || 'open')}</span>
+                                    <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">AI confidence {signals.confidence}%</span>
                                 </div>
+
+                                <div className="mt-4 grid md:grid-cols-2 gap-4">
+                                    <div className="bg-background/70 rounded-xl border border-border/60 px-4 py-3">
+                                        <p className="text-[10px] tracking-[0.18em] text-primary mb-2">WHY THIS WAS PRIORITIZED</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {signals.reasons.map((reason) => (
+                                                <span key={reason} className="px-2.5 py-1 rounded-full bg-card border border-border/70 text-[10px] text-foreground/80">
+                                                    {reason}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="bg-background/70 rounded-xl border border-border/60 px-4 py-3">
+                                        <p className="text-[10px] tracking-[0.18em] text-primary mb-2">HELPER MATCH SCORE</p>
+                                        <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                                            <div
+                                                className="h-full bg-linear-to-r from-primary/70 to-primary"
+                                                style={{ width: `${signals.helperMatch}%` }}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-2">{signals.helperMatch}% estimated helper compatibility</p>
+                                    </div>
+                                </div>
+
                                 <div className="mt-4">
                                     <Link
-                                        href={`/request/${request._id?.toString() || request.id || 'fallback-ai-1'}`}
+                                        href={requestLink}
                                         className="inline-flex items-center px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
                                     >
-                                        Open request
+                                        {canOpenRequest ? 'Open request' : 'View similar requests'}
                                     </Link>
                                 </div>
                             </div>
-                        ))}
+                        )})}
                     </div>
                 </section>
             </main>

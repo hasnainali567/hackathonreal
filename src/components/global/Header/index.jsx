@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const Nav = () => {
     const pathname = usePathname();
     const [hydration, setHydration] = useState({ user: null, mounted: false });
+    const [unreadMessageCount, setUnreadMessageCount] = useState(0);
     const [, startTransition] = useTransition();
 
     useLayoutEffect(() => {
@@ -25,10 +26,47 @@ const Nav = () => {
 
     const { user, mounted } = hydration;
 
+    useLayoutEffect(() => {
+        if (!hydration.user?.email) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const fetchUnreadMessages = async () => {
+            try {
+                const viewerEmail = String(hydration.user.email || '').toLowerCase();
+                const res = await fetch(`/api/messages?viewerEmail=${encodeURIComponent(viewerEmail)}`);
+                if (!res.ok) return;
+
+                const data = await res.json();
+                const unread = (data.threads || []).filter((thread) => {
+                    const recipientEmail = String(thread?.recipient?.email || '').toLowerCase();
+                    return recipientEmail === viewerEmail && !thread?.isRead;
+                }).length;
+
+                if (!isCancelled) {
+                    setUnreadMessageCount(unread);
+                }
+            } catch (err) {
+                if (!isCancelled) {
+                    setUnreadMessageCount(0);
+                }
+            }
+        };
+
+        fetchUnreadMessages();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [hydration.user?.email, pathname]);
+
     const handleLogout = () => {
         localStorage.removeItem('user');
         localStorage.removeItem('authToken');
         localStorage.removeItem('userRole');
+        setUnreadMessageCount(0);
         setHydration({ user: null, mounted: true });
         window.location.href = '/signup';
     };
@@ -69,7 +107,14 @@ const Nav = () => {
                                     : "text-muted-foreground hover:text-foreground"
                             }`}
                         >
-                            {item.label}
+                            <span className="inline-flex items-center gap-2">
+                                {item.label}
+                                {item.href === '/messages' && unreadMessageCount > 0 && (
+                                    <span className="min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center">
+                                        {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                                    </span>
+                                )}
+                            </span>
                         </Link>
                     ))}
                 </div>

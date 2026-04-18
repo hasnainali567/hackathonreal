@@ -10,6 +10,30 @@ const tagKeywords = {
   career: ["interview", "resume", "job", "portfolio", "networking", "career", "internship"],
 };
 
+const MIN_TAGS = 4;
+const MAX_TAGS = 5;
+
+const fallbackTags = [
+  "Help",
+  "Support",
+  "Community",
+  "Guidance",
+  "Problem Solving",
+  "Collaboration",
+  "Learning",
+  "Assistance",
+  "Best Practices"
+];
+
+const categoryTagMap = {
+  frontend: "Frontend",
+  backend: "Backend",
+  mobile: "Mobile",
+  design: "Design",
+  devops: "DevOps",
+  career: "Career"
+};
+
 function suggestTags(title, description) {
   const text = `${title} ${description}`.toLowerCase();
   const suggestedTags = new Set();
@@ -19,12 +43,22 @@ function suggestTags(title, description) {
     for (const keyword of keywords) {
       if (text.includes(keyword)) {
         suggestedTags.add(keyword.charAt(0).toUpperCase() + keyword.slice(1));
+        suggestedTags.add(categoryTagMap[category]);
       }
     }
   }
 
-  // Return unique suggestions (max 5)
-  return Array.from(suggestedTags).slice(0, 5);
+  const uniqueTags = Array.from(suggestedTags).filter(Boolean);
+
+  for (const fallback of fallbackTags) {
+    if (uniqueTags.length >= MAX_TAGS) break;
+    if (!uniqueTags.includes(fallback)) {
+      uniqueTags.push(fallback);
+    }
+  }
+
+  // Always return at least 4 tags, up to 5 tags.
+  return uniqueTags.slice(0, Math.max(MIN_TAGS, Math.min(MAX_TAGS, uniqueTags.length)));
 }
 
 // POST /api/ai/tags - Suggest tags based on title and description

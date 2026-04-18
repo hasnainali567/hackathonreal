@@ -15,7 +15,12 @@ export async function GET(request) {
       : {};
 
     const messages = await Message.find(query).sort({ createdAt: -1 }).lean();
-    const helpers = await User.find({ role: { $in: ['can-help', 'both'] }, isActive: true })
+    const helperQuery = { role: { $in: ['can-help', 'both'] }, isActive: true };
+    if (viewerEmail) {
+      helperQuery.email = { $ne: viewerEmail };
+    }
+
+    const helpers = await User.find(helperQuery)
       .select('name email role location skills trustScore contributions avgRating badges')
       .sort({ trustScore: -1, contributions: -1, createdAt: -1 })
       .lean();
@@ -62,6 +67,10 @@ export async function POST(request) {
 
     if (!senderEmail || !recipientEmail || !body.content) {
       return NextResponse.json({ error: 'senderEmail, recipientEmail and content are required' }, { status: 400 });
+    }
+
+    if (senderEmail === recipientEmail) {
+      return NextResponse.json({ error: 'You cannot send a message to yourself' }, { status: 400 });
     }
 
     const created = await Message.create({
