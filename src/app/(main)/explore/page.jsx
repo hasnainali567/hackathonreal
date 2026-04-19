@@ -95,7 +95,7 @@ const Explore = () => {
 
     return (
         <div className="min-h-screen bg-canvas-grad">
-            <main className="max-w-7xl mx-auto px-6 lg:px-12 py-8 space-y-8">
+            <main className="max-w-7xl mx-auto px-6 lg:px-12 py-6 space-y-8">
                 {/* Hero dark card */}
                 <section className="bg-secondary text-primary-foreground rounded-3xl shadow-card px-10 lg:px-14 py-12 lg:py-14">
                     <p className="text-xs font-semibold tracking-[0.25em] text-primary-foreground/60 mb-5">
@@ -109,9 +109,9 @@ const Explore = () => {
                     </p>
                 </section>
 
-                <section className="flex flex-col lg:flex-row gap-6 lg:items-start">
+                 <section className="flex flex-col lg:flex-row gap-6 lg:items-start">
                     {/* Filters */}
-                    <aside className="bg-card rounded-2xl shadow-card p-6 lg:p-8 lg:w-[320px] lg:shrink-0">
+                    <aside className="bg-card sticky top-6 rounded-2xl shadow-card p-6 lg:p-8 lg:w-[320px] lg:shrink-0 ">
                         <p className="text-sm font-semibold text-foreground mb-5">FILTERS</p>
                         <div className="space-y-4">
                             <div>
