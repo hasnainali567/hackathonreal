@@ -154,6 +154,10 @@ const RequestDetail = () => {
         setRequest(mapRequestForView(data));
       } catch (err) {
         console.error('Error fetching request:', err);
+        if (String(err?.message || '').toLowerCase().includes('request not found')) {
+          router.replace('/dashboard');
+          return;
+        }
         setError(err.message || 'Failed to load request details');
       } finally {
         setLoading(false);
@@ -172,6 +176,12 @@ const RequestDetail = () => {
 
     return () => clearInterval(timer);
   }, [request?.createdAt]);
+
+  useEffect(() => {
+    if (!loading && !request && !error) {
+      router.replace('/dashboard');
+    }
+  }, [loading, request, error, router]);
 
   const role = normalizeRole(currentUser?.role);
   const currentName = String(currentUser?.name || '').toLowerCase();
@@ -511,7 +521,7 @@ const RequestDetail = () => {
         {/* No data state */}
         {!loading && !request && !error && (
           <div className="bg-card rounded-2xl shadow-card p-12 text-center">
-            <p className="text-lg text-muted-foreground">Request not found.</p>
+            <p className="text-lg text-muted-foreground">Redirecting to dashboard...</p>
           </div>
         )}
       </main>

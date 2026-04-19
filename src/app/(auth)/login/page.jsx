@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signIn, useSession } from '@/lib/auth-client';
 
 const Field = ({ label, children }) => (
     <div className="space-y-2">
@@ -16,6 +17,7 @@ const inputCls =
 
 const Login = () => {
     const router = useRouter();
+    const { data: session, isPending } = useSession();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -24,12 +26,10 @@ const Login = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Check if user is already logged in
-        const user = localStorage.getItem('user');
-        if (user) {
+        if (!isPending && session?.user) {
             router.push('/dashboard');
         }
-    }, [router]);
+    }, [isPending, router, session]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -43,50 +43,35 @@ const Login = () => {
         setError(null);
 
         try {
-            if (!formData.email.includes('@')) {
-                setError('Please enter a valid email address');
-                setLoading(false);
-                return;
+            const result = await signIn.email({
+                email: formData.email.trim(),
+                password: formData.password,
+            });
+
+            if (result?.error) {
+                throw new Error(result.error.message || 'Failed to authenticate');
             }
 
-            const userName = formData.email.split('@')[0];
-
-            await fetch('/api/users/sync', {
+            const payload = await fetch('/api/users/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: userName,
-                    email: formData.email,
-                    location: 'Pakistan',
-                    role: 'Both',
-                    skills: ['JavaScript', 'React', 'Node.js', 'Design'],
-                    interests: ['Web Development', 'Mentoring'],
-                    trustScore: 75,
-                    contributions: 12,
-                    avgRating: 4.5,
-                    badges: ['Fast Responder']
+                    email: result?.data?.user?.email || formData.email.trim(),
+                    name: result?.data?.user?.name || formData.email.trim().split('@')[0],
                 })
             });
 
-            // Create demo user session from email
-            const userData = {
-                _id: Math.random().toString(36).substring(7),
-                name: userName,
-                email: formData.email,
-                role: 'Both',
-                location: 'Pakistan',
-                trustScore: 75,
-                contributions: 12,
-                avgRating: 4.5,
-                skills: ['JavaScript', 'React', 'Node.js', 'Design'],
-                interests: ['Web Development', 'Mentoring']
-            };
+            const synced = await payload.json().catch(() => ({}));
+            const user = synced?.data || result?.data?.user || null;
 
-            localStorage.setItem('user', JSON.stringify(userData));
-            localStorage.setItem('authToken', 'demo_token_' + userData._id);
-            localStorage.setItem('userRole', 'Both');
+            if (user) {
+                localStorage.setItem('user', JSON.stringify({
+                    ...user,
+                    role: user.role || 'both'
+                }));
+                localStorage.setItem('userRole', user.role || 'both');
+            }
 
-            // Redirect to dashboard
             router.push('/dashboard');
         } catch (err) {
             console.error('Auth error:', err);
@@ -97,7 +82,7 @@ const Login = () => {
     };
     
     return (
-        <main className="min-h-screen bg-linear-to-br from-tertiary from-5% to-neutral to-90%">
+        <main className="min-h-screen bg-linear-to-tl from-tertiary from-5% to-neutral to-90%">
             <section className="grid lg:grid-cols-2 gap-8 px-6 lg:px-12 mt-10 lg:mt-16 max-w-7xl mx-auto pb-20">
                 {/* Left dark card */}
                 <div className="bg-secondary text-primary-foreground rounded-3xl shadow-card p-10 lg:p-14">

@@ -29,25 +29,51 @@ export async function POST(request) {
       return NextResponse.json({ error: 'name and email are required' }, { status: 400 });
     }
 
+    const updates = {
+      $set: {
+        name,
+        isActive: true
+      },
+      $setOnInsert: {
+        password: body.password || `demo-${Date.now()}`
+      }
+    };
+
+    if (Object.prototype.hasOwnProperty.call(body, 'location')) {
+      updates.$set.location = body.location || '';
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'role')) {
+      updates.$set.role = normalizeRole(body.role);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'skills')) {
+      updates.$set.skills = normalizeArray(body.skills);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'interests')) {
+      updates.$set.interests = normalizeArray(body.interests);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'trustScore')) {
+      updates.$set.trustScore = Number.isFinite(body.trustScore) ? body.trustScore : 50;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'contributions')) {
+      updates.$set.contributions = Number.isFinite(body.contributions) ? body.contributions : 0;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'avgRating')) {
+      updates.$set.avgRating = Number.isFinite(body.avgRating) ? body.avgRating : 0;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'badges')) {
+      updates.$set.badges = normalizeArray(body.badges);
+    }
+
     const user = await User.findOneAndUpdate(
       { email },
-      {
-        $set: {
-          name,
-          location: body.location || '',
-          role: normalizeRole(body.role),
-          skills: normalizeArray(body.skills),
-          interests: normalizeArray(body.interests),
-          trustScore: Number.isFinite(body.trustScore) ? body.trustScore : 50,
-          contributions: Number.isFinite(body.contributions) ? body.contributions : 0,
-          avgRating: Number.isFinite(body.avgRating) ? body.avgRating : 0,
-          badges: normalizeArray(body.badges),
-          isActive: true
-        },
-        $setOnInsert: {
-          password: body.password || `demo-${Date.now()}`
-        }
-      },
+      updates,
       { upsert: true, new: true, runValidators: true }
     ).select('-password');
 

@@ -52,7 +52,11 @@ const Hero = () => (
 
     {/* Right dark card */}
     <div className="relative bg-secondary text-white rounded-3xl shadow-card p-8 lg:p-10 overflow-hidden">
-      <div className="absolute top-8 right-8 h-16 w-16 rounded-full orb-yellow shadow-lg" />
+      <div className="absolute top-6 right-6 h-24 w-24 rounded-full bg-amber-200/25 blur-xl pointer-events-none" />
+      <div
+        className="absolute top-8 right-8 h-16 w-16 rounded-full orb-yellow shadow-lg border border-amber-100/40 z-10 pointer-events-none"
+        aria-hidden="true"
+      />
       <p className="text-xs font-semibold tracking-[0.2em] text-primary mb-5">LIVE PRODUCT FEEL</p>
       <h2 className="text-3xl lg:text-[40px] leading-[1.05] font-extrabold tracking-tight">
         More than a form.

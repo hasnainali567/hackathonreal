@@ -1,33 +1,16 @@
 'use client';
 import Link from "next/link";
-import { useState, useLayoutEffect, useTransition } from "react";
+import { useState, useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useAuth } from '@/hooks/useAuth';
 
 const Nav = () => {
     const pathname = usePathname();
-    const [hydration, setHydration] = useState({ user: null, mounted: false });
+    const { user, logout, isLoading } = useAuth();
     const [unreadMessageCount, setUnreadMessageCount] = useState(0);
-    const [, startTransition] = useTransition();
 
     useLayoutEffect(() => {
-        let userData = null;
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            try {
-                userData = JSON.parse(storedUser);
-            } catch (err) {
-                console.error('Failed to parse user:', err);
-            }
-        }
-        startTransition(() => {
-            setHydration({ user: userData, mounted: true });
-        });
-    }, [startTransition]);
-
-    const { user, mounted } = hydration;
-
-    useLayoutEffect(() => {
-        if (!hydration.user?.email) {
+        if (!user?.email) {
             return;
         }
 
@@ -35,7 +18,7 @@ const Nav = () => {
 
         const fetchUnreadMessages = async () => {
             try {
-                const viewerEmail = String(hydration.user.email || '').toLowerCase();
+                const viewerEmail = String(user.email || '').toLowerCase();
                 const res = await fetch(`/api/messages?viewerEmail=${encodeURIComponent(viewerEmail)}`);
                 if (!res.ok) return;
 
@@ -60,16 +43,7 @@ const Nav = () => {
         return () => {
             isCancelled = true;
         };
-    }, [hydration.user?.email, pathname]);
-
-    const handleLogout = () => {
-        localStorage.removeItem('user');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userRole');
-        setUnreadMessageCount(0);
-        setHydration({ user: null, mounted: true });
-        window.location.href = '/signup';
-    };
+    }, [user?.email, pathname]);
 
     const navItems = [
         {label : "Dashboard", href : '/dashboard'}, 
@@ -84,6 +58,8 @@ const Nav = () => {
         return pathname.startsWith(href);
     };
 
+    const showCreateRequest = pathname !== '/explore';
+
     return (
         <nav className="flex items-center justify-between px-6 lg:px-12 py-2 bg-neutral">
             <div className="flex items-center gap-3">
@@ -95,7 +71,7 @@ const Nav = () => {
                 </Link>
             </div>
 
-            {user && mounted && (
+            {user && !isLoading && (
                 <div className="hidden md:flex items-center gap-1 rounded-full px-2 py-1.5 ">
                     {navItems.map((item) => (
                         <Link 
@@ -121,14 +97,16 @@ const Nav = () => {
             )}
 
             <div className="flex items-center gap-3">
-                {user && mounted ? (
+                {user && !isLoading ? (
                     <>
                         {/* <Link href="/notifications" className="hidden sm:inline-flex px-4 py-2 text-sm rounded-full border border-border bg-card/60 text-foreground hover:bg-card transition-colors">
                             📢 Notifications
                         </Link> */}
-                        <Link href="/create-request" className="px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
-                            + Create request
-                        </Link>
+                        {showCreateRequest && (
+                            <Link href="/create-request" className="px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
+                                + Create request
+                            </Link>
+                        )}
                         <div className="flex items-center gap-3 ml-4 pl-4 border-l border-border cursor-pointer hover:opacity-80 transition"
                             onClick={() => window.location.href = '/profile'}
                         >
@@ -142,7 +120,8 @@ const Nav = () => {
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    handleLogout();
+                                    setUnreadMessageCount(0);
+                                    logout();
                                 }}
                                 className="ml-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition"
                             >
@@ -150,13 +129,13 @@ const Nav = () => {
                             </button>
                         </div>
                     </>
-                ) : mounted ? (
+                ) : !isLoading ? (
                     <div className="flex items-center gap-2">
                         <Link 
-                            href="/login" 
+                            href="/signup" 
                             className="px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
                         >
-                            Sign in
+                            Sign up
                         </Link>
                     </div>
                 ) : null}

@@ -6,7 +6,7 @@ const MainLayout = ({ children }) => {
     return (
         <div className='w-full h-screen flex flex-col'>
             <Nav />
-            <main className='w-full flex-1 bg-linear-to-br from-tertiary from-5% to-neutral to-90%'>
+            <main className='w-full flex-1 bg-linear-to-br from-tertiary from-5% to-neutral '>
                 <ProtectedLayout>
                     {children}
                 </ProtectedLayout>

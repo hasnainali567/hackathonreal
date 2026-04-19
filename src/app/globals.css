@@ -67,7 +67,7 @@
   --primary-foreground: oklch(0.984 0.014 180.72);
   --secondary: #162C29;
   --neutral: #F7F6F0;
-  --tertiary: #87B2A7;
+  --tertiary: #ecebdc;
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.963 0.002 197.1);
   --muted-foreground: oklch(0.56 0.021 213.5);
@@ -146,5 +146,12 @@
 
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  .orb-yellow {
+    background: radial-gradient(circle at 30% 30%, #ffe680 0%, #f6c849 45%, #d79b18 100%);
+    box-shadow: 0 10px 24px rgba(246, 200, 73, 0.35), inset 0 -6px 10px rgba(125, 85, 12, 0.25);
   }
 }

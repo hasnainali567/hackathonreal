@@ -53,6 +53,13 @@ const Profile = () => {
             };
 
             localStorage.setItem('user', JSON.stringify(updatedUser));
+            fetch('/api/users/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedUser)
+            }).catch((err) => {
+                console.error('Failed to sync profile:', err);
+            });
             setUser(updatedUser);
             alert('Profile updated successfully!');
         }

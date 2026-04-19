@@ -2,18 +2,23 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from '@/lib/auth-client';
 
 export default function Home() {
     const router = useRouter();
+    const { data: session, isPending } = useSession();
 
     useEffect(() => {
-        const user = localStorage.getItem('user');
-        if (user) {
+        if (isPending) {
+            return;
+        }
+
+        if (session?.user) {
             router.push('/dashboard');
         } else {
             router.push('/signup');
         }
-    }, [router]);
+    }, [isPending, router, session]);
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-canvas-grad">

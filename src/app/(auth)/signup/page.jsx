@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signUp, useSession } from '@/lib/auth-client';
 
 const Field = ({ label, children }) => (
     <div className="space-y-2">
@@ -17,22 +18,21 @@ const inputCls =
 
 const Auth = () => {
     const router = useRouter();
+    const { data: session, isPending } = useSession();
     const [formData, setFormData] = useState({
         username: '',
         email: '',
-        password: 'demo123',
+        password: '',
         role: 'Both'
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Check if user is already logged in
-        const user = localStorage.getItem('user');
-        if (user) {
+        if (!isPending && session?.user) {
             router.push('/dashboard');
         }
-    }, [router]);
+    }, [isPending, router, session]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -46,42 +46,40 @@ const Auth = () => {
         setError(null);
 
         try {
-            await fetch('/api/users/sync', {
+            const result = await signUp.email({
+                name: formData.username.trim(),
+                email: formData.email.trim(),
+                password: formData.password,
+            });
+
+            if (result?.error) {
+                throw new Error(result.error.message || 'Failed to authenticate');
+            }
+
+            const payload = await fetch('/api/users/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: formData.username,
-                    email: formData.email,
-                    location: 'Pakistan',
+                    email: formData.email.trim(),
+                    name: formData.username.trim(),
                     role: formData.role,
-                    skills: ['JavaScript', 'React', 'Node.js', 'Design'],
-                    interests: ['Web Development', 'Mentoring'],
-                    trustScore: 75,
-                    contributions: 12,
-                    avgRating: 4.5,
-                    badges: ['Fast Responder']
+                    location: '',
+                    skills: [],
+                    interests: []
                 })
             });
 
-            // For demo purposes, create session directly in localStorage
-            const userData = {
-                _id: Math.random().toString(36).substring(7),
-                name: formData.username,
-                email: formData.email,
-                role: formData.role,
-                location: 'Pakistan',
-                trustScore: 75,
-                contributions: 12,
-                avgRating: 4.5,
-                skills: ['JavaScript', 'React', 'Node.js', 'Design'],
-                interests: ['Web Development', 'Mentoring']
-            };
+            const synced = await payload.json().catch(() => ({}));
+            const user = synced?.data || result?.data?.user || null;
 
-            localStorage.setItem('user', JSON.stringify(userData));
-            localStorage.setItem('authToken', 'demo_token_' + userData._id);
-            localStorage.setItem('userRole', formData.role);
+            if (user) {
+                localStorage.setItem('user', JSON.stringify({
+                    ...user,
+                    role: user.role || formData.role
+                }));
+                localStorage.setItem('userRole', user.role || formData.role);
+            }
 
-            // Redirect to dashboard
             router.push('/dashboard');
         } catch (err) {
             console.error('Auth error:', err);

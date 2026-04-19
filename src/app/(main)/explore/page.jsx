@@ -54,27 +54,40 @@ const Explore = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        let ignore = false;
+
+        const fetchRequests = async () => {
+            try {
+                setLoading(true);
+                const query = new URLSearchParams();
+                if (filters.category !== 'all') query.append('category', filters.category);
+                if (filters.urgency !== 'all') query.append('urgency', filters.urgency);
+                query.append('limit', '10');
+
+                const res = await fetch(`/api/requests?${query}`);
+                const data = await res.json();
+                if (!ignore) {
+                    setRequests(data.data || []);
+                    setError(null);
+                }
+            } catch (err) {
+                if (!ignore) {
+                    setError('Failed to fetch requests');
+                }
+                console.error(err);
+            } finally {
+                if (!ignore) {
+                    setLoading(false);
+                }
+            }
+        };
+
         fetchRequests();
+
+        return () => {
+            ignore = true;
+        };
     }, [filters]);
-
-    const fetchRequests = async () => {
-        try {
-            setLoading(true);
-            const query = new URLSearchParams();
-            if (filters.category !== 'all') query.append('category', filters.category);
-            if (filters.urgency !== 'all') query.append('urgency', filters.urgency);
-            query.append('limit', '10');
-
-            const res = await fetch(`/api/requests?${query}`);
-            const data = await res.json();
-            setRequests(data.data || []);
-        } catch (err) {
-            setError('Failed to fetch requests');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleFilterChange = (filterName, value) => {
         setFilters({ ...filters, [filterName]: value });
@@ -82,7 +95,7 @@ const Explore = () => {
 
     return (
         <div className="min-h-screen bg-canvas-grad">
-            <main className="max-w-[1280px] mx-auto px-6 lg:px-12 py-8 space-y-8">
+            <main className="max-w-7xl mx-auto px-6 lg:px-12 py-8 space-y-8">
                 {/* Hero dark card */}
                 <section className="bg-secondary text-primary-foreground rounded-3xl shadow-card px-10 lg:px-14 py-12 lg:py-14">
                     <p className="text-xs font-semibold tracking-[0.25em] text-primary-foreground/60 mb-5">
@@ -96,65 +109,67 @@ const Explore = () => {
                     </p>
                 </section>
 
-                {/* Filters */}
-                <section className="bg-card rounded-2xl shadow-card p-6 lg:p-8">
-                    <p className="text-sm font-semibold text-foreground mb-5">FILTERS</p>
-                    <div className="grid md:grid-cols-4 gap-4">
-                        <div>
-                            <label className="block text-xs text-foreground/60 mb-2">Category</label>
-                            <select
-                                value={filters.category}
-                                onChange={(e) => handleFilterChange('category', e.target.value)}
-                                className="w-full px-4 py-2.5 rounded-full bg-background/60 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            >
-                                <option value="all">All Categories</option>
-                                <option value="web">Web Development</option>
-                                <option value="mobile">Mobile Development</option>
-                                <option value="design">Design</option>
-                                <option value="backend">Backend Development</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs text-foreground/60 mb-2">Urgency</label>
-                            <select
-                                value={filters.urgency}
-                                onChange={(e) => handleFilterChange('urgency', e.target.value)}
-                                className="w-full px-4 py-2.5 rounded-full bg-background/60 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            >
-                                <option value="all">All Urgency</option>
-                                <option value="high">High</option>
-                                <option value="medium">Medium</option>
-                                <option value="low">Low</option>
-                            </select>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Error State */}
-                {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-700">
-                        {error}
-                    </div>
-                )}
-
-                {/* Loading State */}
-                {loading && (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {[...Array(6)].map((_, i) => (
-                            <div key={i} className="bg-card rounded-2xl p-6 shadow-card animate-pulse">
-                                <div className="h-4 bg-background/40 rounded mb-3 w-3/4"></div>
-                                <div className="h-6 bg-background/40 rounded mb-4"></div>
-                                <div className="h-12 bg-background/40 rounded"></div>
+                <section className="flex flex-col lg:flex-row gap-6 lg:items-start">
+                    {/* Filters */}
+                    <aside className="bg-card rounded-2xl shadow-card p-6 lg:p-8 lg:w-[320px] lg:shrink-0">
+                        <p className="text-sm font-semibold text-foreground mb-5">FILTERS</p>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs text-foreground/60 mb-2">Category</label>
+                                <select
+                                    value={filters.category}
+                                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-full bg-background/60 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                >
+                                    <option value="all">All Categories</option>
+                                    <option value="web">Web Development</option>
+                                    <option value="mobile">Mobile Development</option>
+                                    <option value="design">Design</option>
+                                    <option value="backend">Backend Development</option>
+                                </select>
                             </div>
-                        ))}
-                    </div>
-                )}
 
-                {/* Requests grid */}
-                {!loading && (
-                    <section>
-                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <label className="block text-xs text-foreground/60 mb-2">Urgency</label>
+                                <select
+                                    value={filters.urgency}
+                                    onChange={(e) => handleFilterChange('urgency', e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-full bg-background/60 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                >
+                                    <option value="all">All Urgency</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <div className="flex-1 min-w-0">
+                        {/* Error State */}
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-700 mb-6">
+                                {error}
+                            </div>
+                        )}
+
+                        {/* Loading State */}
+                        {loading && (
+                            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="bg-card rounded-2xl p-6 shadow-card animate-pulse">
+                                        <div className="h-4 bg-background/40 rounded mb-3 w-3/4"></div>
+                                        <div className="h-6 bg-background/40 rounded mb-4"></div>
+                                        <div className="h-12 bg-background/40 rounded"></div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Requests grid */}
+                        {!loading && (
+                            <section>
+                        <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-semibold text-foreground">
                                 Showing {requests.length} requests
                             </p>
@@ -165,7 +180,7 @@ const Explore = () => {
                                 <p className="text-muted-foreground">No requests found. Try adjusting your filters.</p>
                             </div>
                         ) : (
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                            <div className="flex flex-col gap-4">
                                 {requests.map((request) => (
                                     <RequestCard
                                         key={request.id || request._id}
@@ -184,8 +199,10 @@ const Explore = () => {
                                 ))}
                             </div>
                         )}
-                    </section>
-                )}
+                            </section>
+                        )}
+                    </div>
+                </section>
             </main>
         </div>
     );
